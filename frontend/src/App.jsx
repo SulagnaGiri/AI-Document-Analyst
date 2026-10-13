@@ -17,11 +17,25 @@ const MULTI_DOC_QUESTIONS = [
   'What is missing from the partial invoice?',
 ]
 
-const STATUS_NOTES = {
-  not_configured: 'NVIDIA_API_KEY is not set, so a rule-based answer was used.',
-  request_failed_or_invalid_response: 'The NVIDIA request failed (see the backend terminal), so a rule-based answer was used.',
-  response_unsupported_or_uncited: 'The model could not back its answer with a quote from the documents, so a rule-based answer was used.',
+function getStatusNote(status, response) {
+  const model = response?.model || ''
+  const isDonut = model.toLowerCase().includes('donut') || model.toLowerCase().includes('naver')
+  if (status === 'not_configured') {
+    return isDonut
+      ? 'HF_TOKEN is not set in .env, so a verified rule-based answer was used.'
+      : 'Model API key is not set, so a rule-based answer was used.'
+  }
+  if (status === 'request_failed_or_invalid_response') {
+    return isDonut
+      ? 'The Hugging Face Donut request failed (see terminal), so a rule-based answer was used.'
+      : 'The model API request failed, so a rule-based answer was used.'
+  }
+  if (status === 'response_unsupported_or_uncited') {
+    return 'The model could not back its answer with an exact verbatim quote from the documents, so a rule-based answer was used.'
+  }
+  return null
 }
+
 
 let nextId = 1
 const makeDoc = (name, text) => ({ id: nextId++, name, text })
@@ -70,10 +84,18 @@ function formatMoney(value, currency) {
 
 function ModelBadge({ health }) {
   if (!health) return <span className="badge badge-muted">Backend offline</span>
-  if (!health.llm_configured) return <span className="badge badge-warn">Rule-based only</span>
+  const modelName = (health.model || 'Model').split('/').pop()
+  if (!health.llm_configured) {
+    const isDonut = health.provider === 'donut' || (health.model || '').includes('donut')
+    return (
+      <span className="badge badge-warn" title={`${health.model || ''} (${isDonut ? 'HF_TOKEN missing in .env' : 'API key missing in .env'})`}>
+        <span className="dot" /> {modelName} {isDonut ? '(HF_TOKEN needed)' : '(Rule-based)'}
+      </span>
+    )
+  }
   return (
     <span className="badge badge-ok" title={health.model}>
-      <span className="dot" /> {health.model.split('/').pop()}
+      <span className="dot" /> {modelName}
     </span>
   )
 }
@@ -143,7 +165,11 @@ function AnalysisView({ analysis }) {
     <div>
       <p className="summary">{analysis.summary}</p>
       <p className="analysis-source">
-        {analysis.analysis_source === 'nvidia' ? 'Extracted by the model' : 'Extracted by keyword rules (model unavailable)'}
+        {analysis.analysis_source === 'donut' || analysis.analysis_source === 'huggingface'
+          ? 'Extracted by Hugging Face Donut DocVQA'
+          : analysis.analysis_source === 'nvidia'
+          ? 'Extracted by reasoning model'
+          : 'Extracted by verified rule engine'}
       </p>
       {fields.length > 0 && (
         <dl className="field-grid">
@@ -170,9 +196,13 @@ function ChatMessage({ message }) {
   const { response } = message
   const source = response.answer_source
   const sourceLabel = {
+    donut: `Answered by ${(response.model || 'Donut').split('/').pop()}`,
+    huggingface: `Answered by ${(response.model || 'Hugging Face').split('/').pop()}`,
     nvidia: `Answered by ${(response.model || 'NVIDIA').split('/').pop()}`,
     verified_comparison: 'Verified comparison',
+    python_rules: 'Verified rule engine',
   }[source] || 'Rule-based fallback'
+  const note = getStatusNote(response.llm_status, response)
   return (
     <div className="turn">
       <div className="bubble bubble-user">{message.question}</div>
@@ -193,8 +223,8 @@ function ChatMessage({ message }) {
 
         <div className="meta">
           <span className={`badge ${source === 'python_rules' ? 'badge-muted' : 'badge-ok'}`}>{sourceLabel}</span>
-          {source === 'python_rules' && STATUS_NOTES[response.llm_status] && (
-            <span className="meta-note">{STATUS_NOTES[response.llm_status]}</span>
+          {source === 'python_rules' && note && (
+            <span className="meta-note">{note}</span>
           )}
         </div>
       </div>

@@ -29,6 +29,13 @@ ALLOWED_TYPES = {"invoice", "purchase_order", "delivery_note", "email", "policy"
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
+HF_TOKEN = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+DONUT_MODEL = os.environ.get("DONUT_MODEL", "naver-clova-ix/donut-base-finetuned-docvqa")
+DONUT_API_URL = os.environ.get(
+    "DONUT_API_URL", f"https://api-inference.huggingface.co/models/{DONUT_MODEL}"
+)
+MODEL_PROVIDER = os.environ.get("MODEL_PROVIDER", "donut" if (HF_TOKEN or DONUT_MODEL) else "nvidia")
+
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY")
 # Nemotron 3 Super is a reasoning model: it thinks before answering (returned
 # separately as reasoning_content), which lets it add up tax lines, read tables, etc.
@@ -42,6 +49,87 @@ SYSTEM_PROMPT = (
     "(interpret tables, add up or compare figures, resolve synonyms such as GST = CGST + SGST + IGST), "
     "and answer only from what the documents support. Always reply with a single valid JSON object and nothing else."
 )
+
+import base64
+
+def _text_to_image_base64(text: str) -> str:
+    """Render document text to a clean image canvas for Donut DocVQA."""
+    try:
+        from PIL import Image, ImageDraw
+        img = Image.new("RGB", (850, 1100), color=(255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        lines = text.splitlines()[:55]
+        y = 40
+        for line in lines:
+            draw.text((40, y), line[:90], fill=(20, 20, 20))
+            y += 18
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Could not render text to image: %s", exc)
+        return ""
+
+
+def _call_donut_api(question: str, text: str) -> str | None:
+    """Query Hugging Face Inference API for naver-clova-ix/donut-base-finetuned-docvqa."""
+    if not HF_TOKEN:
+        return None
+    image_b64 = _text_to_image_base64(text)
+    if not image_b64:
+        return None
+    endpoints = [
+        f"https://router.huggingface.co/hf-inference/models/{DONUT_MODEL}",
+        DONUT_API_URL,
+    ]
+    for endpoint in endpoints:
+        try:
+            payload = json.dumps({
+                "inputs": {
+                    "image": image_b64,
+                    "question": question,
+                }
+            }).encode("utf-8")
+            req = Request(
+                endpoint,
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {HF_TOKEN}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urlopen(req, timeout=35) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            if isinstance(data, list) and len(data) > 0:
+                return data[0].get("answer")
+            if isinstance(data, dict):
+                return data.get("answer")
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Donut HF inference failed on %s: %s", endpoint, exc)
+    return None
+
+
+def _donut_extract_fields(name: str, text: str) -> dict:
+    """Use Donut DocVQA to extract key fields."""
+    extracted = {}
+    queries = {
+        "vendor": "Who is the vendor or supplier?",
+        "invoice_number": "What is the invoice number?",
+        "purchase_order_number": "What is the purchase order number?",
+        "total_amount": "What is the grand total amount?",
+        "tax_amount": "What is the total tax or GST amount?",
+        "document_date": "What is the date of the document?",
+    }
+    for field, query in queries.items():
+        ans = _call_donut_api(query, text)
+        if ans and isinstance(ans, str) and ans.strip():
+            clean_ans = ans.strip()
+            if _quote_in_source(clean_ans, text):
+                extracted[field] = {"value": clean_ans, "evidence": clean_ans, "source": "donut"}
+    return extracted
+
+
 
 
 def _clean_json_text(raw: str) -> str:
@@ -284,6 +372,15 @@ Documents:
 
 def analyze_with_fallback(name: str, text: str) -> dict:
     fallback = analyze_document(name, text)
+    fallback["model"] = DONUT_MODEL if MODEL_PROVIDER == "donut" else NVIDIA_MODEL
+
+    if MODEL_PROVIDER == "donut" and HF_TOKEN:
+        donut_fields = _donut_extract_fields(name, text)
+        if donut_fields:
+            fallback["fields"].update(donut_fields)
+            fallback["analysis_source"] = "donut"
+            return fallback
+
     if NVIDIA_API_KEY:
         llm_result = _llm_analyze_document(name, text)
         if isinstance(llm_result, dict):
@@ -317,12 +414,14 @@ def analyze_with_fallback(name: str, text: str) -> dict:
                 if not isinstance(llm_result.get("missing_questions"), list):
                     llm_result["missing_questions"] = fallback["missing_questions"]
                 llm_result["analysis_source"] = "nvidia"
+                llm_result["model"] = NVIDIA_MODEL
                 return llm_result
     fallback["analysis_source"] = "python_rules"
     return fallback
 
 
 def answer_with_fallback(question: str, documents: list[dict[str, str]]) -> dict:
+    active_model = DONUT_MODEL if MODEL_PROVIDER == "donut" else NVIDIA_MODEL
     mentions_both = re.search(r"invoice", question, re.I) and re.search(r"purchase order|\bpo\b", question, re.I)
     if is_comparison_question(question) and (len(documents) > 1 or mentions_both):
         comparison = compare_with_verification(documents)
@@ -331,7 +430,8 @@ def answer_with_fallback(question: str, documents: list[dict[str, str]]) -> dict
             "citations": comparison_citations(comparison),
             "comparison": comparison,
             "answer_source": "verified_comparison",
-            "llm_status": "used_for_extraction" if NVIDIA_API_KEY else "not_configured",
+            "model": active_model,
+            "llm_status": "used_for_extraction" if (HF_TOKEN or NVIDIA_API_KEY) else "not_configured",
         }
 
     analyses = [
@@ -344,11 +444,30 @@ def answer_with_fallback(question: str, documents: list[dict[str, str]]) -> dict
             "answer": "I could not find enough document context to answer this question.",
             "citations": [],
             "answer_source": "python_rules",
+            "model": active_model,
             "llm_status": "not_attempted_no_documents",
         }
     fallback = answer_from_documents(question, analyses, documents)
     fallback["answer_source"] = "python_rules"
+    fallback["model"] = active_model
     fallback["llm_status"] = "not_configured"
+
+    if MODEL_PROVIDER == "donut" and HF_TOKEN and len(documents) == 1:
+        donut_ans = _call_donut_api(question, documents[0].get("text", ""))
+
+        if donut_ans and isinstance(donut_ans, str) and donut_ans.strip():
+            doc_name = documents[0].get("name", "document.txt")
+            doc_text = documents[0].get("text", "")
+            citations = []
+            if _quote_in_source(donut_ans.strip(), doc_text):
+                citations.append({"document": doc_name, "quote": donut_ans.strip()})
+            return {
+                "answer": donut_ans.strip(),
+                "citations": citations,
+                "answer_source": "donut",
+                "llm_status": "answered",
+                "model": DONUT_MODEL,
+            }
 
     if NVIDIA_API_KEY:
         fallback["llm_status"] = "request_failed_or_invalid_response"
@@ -426,12 +545,23 @@ CORS(app)
 
 @app.route("/")
 def index():
-    return "<html><body><h2>Use the frontend app on port 3010.</h2><p>Do not use this backend root page for the assignment UI.</p></body></html>"
+    try:
+        return render_template("index.html")
+    except Exception:
+        return "<html><body><h2>AI Document Analyst API is running on port 5001.</h2><p>Access the React UI or use the API endpoints.</p></body></html>"
 
 
 @app.route("/api/health")
 def health():
-    return jsonify({"llm_configured": bool(NVIDIA_API_KEY), "model": NVIDIA_MODEL})
+    active_model = DONUT_MODEL if MODEL_PROVIDER == "donut" else NVIDIA_MODEL
+    is_configured = bool(HF_TOKEN if MODEL_PROVIDER == "donut" else NVIDIA_API_KEY)
+    return jsonify({
+        "llm_configured": is_configured,
+        "model": active_model,
+        "provider": MODEL_PROVIDER,
+        "donut_model": DONUT_MODEL,
+        "nvidia_model": NVIDIA_MODEL,
+    })
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -517,5 +647,6 @@ def answer_endpoint():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "5000"))
+    port = int(os.environ.get("PORT", "5001"))
     app.run(debug=True, host="0.0.0.0", port=port)
+

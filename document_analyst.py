@@ -487,33 +487,38 @@ def answer_from_documents(
             "about", "after", "before", "does", "from", "give", "have", "into",
             "is", "list", "me", "please", "show", "tell", "that", "the", "their",
             "there", "this", "those", "what", "when", "where", "which", "who",
-            "with", "would", "you", "your",
+            "with", "would", "you", "your", "can", "find", "get", "how", "much",
         }
         query_terms = {
             token for token in re.findall(r"[a-z0-9]+", normalized)
-            if len(token) > 2 and token not in stop_words
+            if len(token) >= 2 and token not in stop_words
         }
         matches = []
         for document in documents:
-            for line in document.get("text", "").splitlines():
+            lines = document.get("text", "").splitlines()
+            for line_idx, line in enumerate(lines):
                 quote = line.strip()
                 if not quote:
                     continue
                 line_terms = set(re.findall(r"[a-z0-9]+", quote.lower()))
                 overlap = query_terms & line_terms
                 if overlap:
-                    matches.append((len(overlap), quote, document.get("name", "document.txt")))
+                    score = len(overlap)
+                    # Boost lines with numbers/amounts if question asks for numbers or items
+                    if re.search(r"\d", quote):
+                        score += 0.5
+                    matches.append((score, quote, document.get("name", "document.txt")))
         matches.sort(key=lambda item: item[0], reverse=True)
         if matches:
-            best_score = matches[0][0]
-            selected = [item for item in matches if item[0] == best_score][:3]
+            selected = matches[:3]
+            answer_text = " ".join(item[1] for item in selected)
             return {
-                "answer": " ".join(item[1] for item in selected),
+                "answer": answer_text,
                 "citations": [
                     {"document": item[2], "quote": item[1]} for item in selected
                 ],
             }
     return {
-        "answer": "I could not find a supported answer in the supplied documents.",
+        "answer": "I could not find enough document context to answer this question. (Add HF_TOKEN in .env for full Donut AI question answering).",
         "citations": [],
     }
