@@ -224,6 +224,15 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(analysis["fields"]["currency"]["value"], "USD")
         self.assertTrue(analysis["fields"]["currency"]["verified"])
 
+    def test_model_questions_that_repeat_required_field_questions_are_dropped(self):
+        reply = fake_analysis("invoice", {})
+        reply["missing_information"] = ["What is the total amount payable on this invoice?", "Who is the buyer?"]
+        with llm_on(), patch.object(pipeline, "_llm_analyze_document", return_value=reply):
+            analysis = pipeline.analyze("p.txt", "INVOICE")
+        self.assertIn("What is the total amount?", analysis["missing_questions"])
+        self.assertNotIn("What is the total amount payable on this invoice?", analysis["missing_questions"])
+        self.assertIn("Who is the buyer?", analysis["missing_questions"])
+
     def test_analysis_is_cached_per_document(self):
         reply = fake_analysis("invoice", {})
         with llm_on(), patch.object(pipeline, "_llm_analyze_document", return_value=reply) as mocked:

@@ -2,8 +2,6 @@
 
 An LLM-powered system that reads business documents (invoices, purchase orders, delivery notes, emails and policies), extracts what matters, cross-checks documents against each other, and answers questions **using only the supplied documents, with line-level evidence**.
 
-![Invoice vs purchase order check](docs/screenshots/comparison.png)
-
 ## Problem statement
 
 A company receives documents from customers and suppliers in many formats. Build an AI system that can analyze a document and answer questions about it. It should:
@@ -107,6 +105,10 @@ python evaluation/run_eval.py
 
 Not deployed. Run locally as above.
 
+## Demo
+
+> **TODO (team):** add the demo video or screenshots link here.
+
 ## Repository guide
 
 | Path | What it is |
@@ -114,9 +116,8 @@ Not deployed. Run locally as above.
 | [`docs/design.md`](docs/design.md) | **Solution design**: decomposition, architecture diagram, where we use the LLM vs code, trade-offs |
 | [`docs/prompts.md`](docs/prompts.md) | **Prompt engineering**: V1 → problem → V2 → … → final prompts, and why |
 | [`docs/evaluation.md`](docs/evaluation.md) | **Evaluation results** on the 45-case test set |
-| [`docs/failure_cases.md`](docs/failure_cases.md) | **Failure cases and improvements** (11 cases) |
+| [`docs/failure_cases.md`](docs/failure_cases.md) | **Failure cases and improvements** (18 cases, 6 found by the evaluation) |
 | [`docs/ai_usage.md`](docs/ai_usage.md) | **AI usage** during development |
-| [`docs/demo.md`](docs/demo.md) | **Demo** screenshots |
 | [`pipeline.py`](pipeline.py) | Analysis, Q&A and comparison; all prompts |
 | [`grounding.py`](grounding.py) | Numbered-line context, citation and value verification, answer labels |
 | [`checks.py`](checks.py) | Deterministic checks: invoice vs PO, subtotal + tax = total |

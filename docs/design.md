@@ -104,8 +104,9 @@ Results are cached per document text, so analyzing then comparing does not call 
 4. **Status decided by code, from verified fields only.** A value that cannot be verified is excluded from the comparison, which can turn a would-be MATCH/MISMATCH into `INSUFFICIENT_DATA`. *Trade-off:* we prefer "I can't tell" over a confident wrong answer.
 5. **Type definitions as configuration.** Adding a document type (e.g. a credit note) means adding an entry to `document_types.py`, not new code.
 6. **Layout-preserving PDF extraction.** Column gaps become ` | `, so each table row is one line. *Trade-off:* multi-column headers (seller and buyer side by side) end up on the same line, which sometimes makes the buyer/seller fields harder to verify.
-7. **JSON mode plus one retry.** Product names such as `48"` used to break the model's JSON roughly one time in three.
+7. **JSON mode plus one retry.** Product names such as `48"` used to break the model's JSON roughly one time in three. Replies that parse but lack required keys (an occasional bare `{"document_type": "unknown"}`) are retried the same way.
 8. **Caching analyses** by document text so "Analyze all" followed by "Run check" or a comparison question reuses results.
+9. **Documents are data, not instructions.** The system prompt tells the model to ignore and report instructions embedded in documents. Evaluation case Q14 checks this with an "ignore previous instructions" line. *Trade-off:* this is a prompt-level defence, not a guarantee; the code-side checks (citations, verified values, code-decided comparison) limit what a successful injection could change.
 
 ## 6. Known limitations
 

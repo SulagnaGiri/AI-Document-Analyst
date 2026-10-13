@@ -29,14 +29,14 @@ CASES = json.loads((ROOT / "evaluation" / "cases.json").read_text())
 
 
 class JsonFailureCounter(logging.Handler):
-    """Counts replies the model sent as invalid JSON (each one triggers a retry)."""
+    """Counts replies that were invalid or incomplete JSON (each one triggers a retry)."""
 
     def __init__(self):
         super().__init__()
         self.count = 0
 
     def emit(self, record):
-        if "invalid JSON" in record.getMessage():
+        if "invalid JSON" in record.getMessage() or "incomplete JSON" in record.getMessage():
             self.count += 1
 
 
@@ -226,7 +226,7 @@ METRIC_LABELS = [
     ("qa_answers_with_valid_citation", "Answers with a valid citation", "Factual answers citing at least one real document line."),
     ("type_consistency_across_runs", "Type consistency", "Same type on two independent runs."),
     ("field_consistency_across_runs", "Field consistency", "Same field value on two independent runs."),
-    ("valid_structured_output", "Valid structured output", "Model replies that parsed as JSON on the first try."),
+    ("valid_structured_output", "Valid structured output", "Model replies that were valid, complete JSON on the first try (others are retried once)."),
 ]
 
 
@@ -256,6 +256,25 @@ def write_report(metrics: dict, analysis_runs: list[dict], comparisons: list[dic
         "|---|---|---|",
     ]
     lines += [f"| {label} | {fmt(metrics[key])} | {meaning} |" for key, label, meaning in METRIC_LABELS]
+    previous_path = ROOT / "evaluation" / "results_run1.json"
+    if previous_path.exists():
+        previous = json.loads(previous_path.read_text())["metrics"]
+        lines += [
+            "",
+            "### Before and after the evaluation-driven fixes",
+            "",
+            "Run 1 exposed incomplete model replies, unnormalized amounts, a missing currency, a prompt-injection",
+            "refusal and a conflict answered as \"cannot determine\" (see [failure_cases.md](failure_cases.md), cases 12-16).",
+            "",
+            "Read the improvement with care: Q14, A03 and the amount normalization were fixed by the changes;",
+            "Q12 (conflicting documents) still varies between runs (failure case 18).",
+            "A07/A08 failed on run 1 because of an occasional near-empty model reply; such replies are now retried,",
+            "but if none occurred in this run, part of that gain is run-to-run variation rather than the fix.",
+            "",
+            "| Metric | Run 1 | This run |",
+            "|---|---|---|",
+        ]
+        lines += [f"| {label} | {fmt(previous.get(key))} | {fmt(metrics[key])} |" for key, label, _ in METRIC_LABELS]
     lines += [
         "",
         f"Average latency: {metrics['avg_seconds_analysis']}s per document analysis, {metrics['avg_seconds_qa']}s per question. "
@@ -309,7 +328,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--repeat", type=int, default=2, help="runs per analysis case (2+ measures consistency)")
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--report-only", action="store_true", help="rebuild docs/evaluation.md from evaluation/results.json")
     args = parser.parse_args()
+    if args.report_only:
+        saved = json.loads((ROOT / "evaluation" / "results.json").read_text())
+        (ROOT / "docs" / "evaluation.md").write_text(
+            write_report(saved["metrics"], saved["analysis"], saved["comparison"], saved["qa"], args.repeat))
+        return
     if not llm_client.configured():
         sys.exit("NVIDIA_API_KEY is not set; the evaluation runs against the live model.")
 

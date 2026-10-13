@@ -18,7 +18,7 @@ from typing import Any
 import llm_client
 from checks import check_internal_consistency, compare_documents, comparison_citations, format_comparison_answer
 from document_types import DOCUMENT_TYPES, describe_types_for_prompt, missing_field_questions
-from grounding import NUMBER, format_context, grade_answer, resolve_citations, to_decimal, value_supported
+from grounding import NUMBER, format_context, grade_answer, resolve_citations, to_decimal, value_supported, words
 
 AMOUNT_FIELDS = {"subtotal", "tax_amount", "total_amount"}
 # How each currency appears in documents, for verifying an ISO code the model inferred from a symbol.
@@ -66,6 +66,9 @@ Rules:
 - Omit fields the document does not state. Do not guess.
 - For amounts give the number as printed (e.g. "52,400" or "481630.08"); for currency give an ISO code.
 - Choose "unknown" if the document is not clearly one type or mixes several.
+- inconsistencies are contradictions or calculation errors inside the document. Missing fields are not
+  inconsistencies; they belong in missing_information.
+- missing_information: at most 4 questions about the most important missing details, no duplicates.
 
 {context}"""
 
@@ -111,6 +114,15 @@ def _llm_analyze_document(name: str, text: str) -> dict | None:
 
 
 # ---------------------------------------------------------------- analysis
+
+_QUESTION_STOPWORDS = {"what", "is", "the", "a", "an", "of", "on", "this", "in", "are", "being", "who", "which", "there", "any", "by", "for", "does", "it"}
+
+
+def _same_question(first: str, second: str) -> bool:
+    """True if the content words of the shorter question are all in the longer one."""
+    a, b = ({word for word in words(text) if word not in _QUESTION_STOPWORDS} for text in (first, second))
+    shorter, longer = sorted((a, b), key=len)
+    return bool(shorter) and shorter <= longer
 
 _analysis_cache: dict[str, dict] = {}
 
@@ -179,7 +191,7 @@ def analyze(name: str, text: str) -> dict:
 
     missing = missing_field_questions(document_type, set(verified_fields))
     for question in result.get("missing_information") or []:
-        if isinstance(question, str) and question.strip() and question.strip() not in missing:
+        if isinstance(question, str) and question.strip() and not any(_same_question(question, kept) for kept in missing):
             missing.append(question.strip())
 
     summary = result.get("summary") if isinstance(result.get("summary"), str) else ""
