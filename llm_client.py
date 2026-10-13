@@ -38,8 +38,12 @@ def configured() -> bool:
     return bool(NVIDIA_API_KEY)
 
 
-def call_llm(system: str, prompt: str, attempts: int = 2) -> dict | None:
-    """Return the model's JSON object, or None if the API is unavailable or never returns valid JSON."""
+def call_llm(system: str, prompt: str, required_keys: tuple[str, ...] = (), attempts: int = 2) -> dict | None:
+    """Return the model's JSON object, or None if the API is unavailable or never returns valid, complete JSON.
+
+    A reply that parses but lacks `required_keys` (we have seen bare {"document_type": "unknown"})
+    is retried like invalid JSON.
+    """
     if not NVIDIA_API_KEY:
         return None
     for attempt in range(1, attempts + 1):
@@ -62,9 +66,9 @@ def call_llm(system: str, prompt: str, attempts: int = 2) -> dict | None:
                 data = json.loads(response.read().decode("utf-8"))
             content = data["choices"][0]["message"]["content"] or ""
             parsed = json.loads(_clean_json_text(content))
-            if isinstance(parsed, dict):
+            if isinstance(parsed, dict) and all(key in parsed for key in required_keys):
                 return parsed
-            log.warning("NVIDIA reply was JSON but not an object (attempt %s/%s)", attempt, attempts)
+            log.warning("NVIDIA returned incomplete JSON (attempt %s/%s)", attempt, attempts)
         except json.JSONDecodeError:
             log.warning("NVIDIA returned invalid JSON (attempt %s/%s)", attempt, attempts)
         except HTTPError as exc:

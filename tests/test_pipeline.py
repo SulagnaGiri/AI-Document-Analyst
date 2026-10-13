@@ -213,6 +213,17 @@ class AnalysisTests(unittest.TestCase):
             analysis = pipeline.analyze("x.txt", "something")
         self.assertEqual(analysis["document_type"], "unknown")
 
+    def test_amounts_with_symbols_are_normalized_and_currency_inferred_from_symbol(self):
+        reply = fake_analysis("invoice", {
+            "total_amount": {"value": "$840.00", "lines": [2]},
+            "currency": {"value": "usd", "lines": [2]},
+        })
+        with llm_on(), patch.object(pipeline, "_llm_analyze_document", return_value=reply):
+            analysis = pipeline.analyze("us.txt", "INVOICE\nTotal Due: $840.00")
+        self.assertEqual(analysis["fields"]["total_amount"]["value"], "840.00")
+        self.assertEqual(analysis["fields"]["currency"]["value"], "USD")
+        self.assertTrue(analysis["fields"]["currency"]["verified"])
+
     def test_analysis_is_cached_per_document(self):
         reply = fake_analysis("invoice", {})
         with llm_on(), patch.object(pipeline, "_llm_analyze_document", return_value=reply) as mocked:
@@ -248,6 +259,14 @@ class LlmClientTests(unittest.TestCase):
         broken = '{"answer": "SEC 48"TRUST HIGHSPEED"}'
         with llm_on(), patch("llm_client.urlopen", side_effect=[self.reply(broken), self.reply('{"answer": "ok"}')]) as mocked:
             self.assertEqual(llm_client.call_llm("sys", "p"), {"answer": "ok"})
+        self.assertEqual(mocked.call_count, 2)
+
+    def test_incomplete_reply_is_retried(self):
+        with llm_on(), patch("llm_client.urlopen", side_effect=[
+            self.reply('{"document_type": "unknown"}'), self.reply('{"document_type": "invoice", "summary": "s", "fields": {}}'),
+        ]) as mocked:
+            result = llm_client.call_llm("sys", "p", required_keys=("document_type", "summary", "fields"))
+        self.assertEqual(result["document_type"], "invoice")
         self.assertEqual(mocked.call_count, 2)
 
     def test_think_block_and_fences_are_stripped(self):
