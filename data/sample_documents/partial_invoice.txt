@@ -1,0 +1,6 @@
+INVOICE
+Vendor: Northstar Supplies
+Invoice No: INV-205
+Invoice Date: 2026-04-12
+Payment terms: Net 30
+Total amount is not shown on this copy.

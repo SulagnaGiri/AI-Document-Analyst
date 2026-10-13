@@ -1,0 +1,30 @@
+{
+  "cases": [
+    {"name":"invoice_basic","text":"INVOICE\nVendor: Acme Ltd\nInvoice No: A-100\nInvoice Date: 2026-01-02\nGrand Total: INR 1250","expected_type":"invoice","expected_fields":{"vendor":"Acme Ltd","invoice_number":"A-100","total_amount":"1,250.00"}},
+    {"name":"invoice_comma_amount","text":"TAX INVOICE\nSupplier: River Labs\nInvoice Number: RL-8\nTotal Amount: INR 52,400","expected_type":"invoice","expected_fields":{"vendor":"River Labs","invoice_number":"RL-8","total_amount":"52,400.00"}},
+    {"name":"invoice_decimal_usd","text":"INVOICE\nVendor: Northwind\nInvoice #: NW-91\nAmount Due: $840.50","expected_type":"invoice","expected_fields":{"vendor":"Northwind","invoice_number":"NW-91","total_amount":"840.50"}},
+    {"name":"invoice_missing_total","text":"INVOICE\nVendor: Northstar Supplies\nInvoice No: INV-205\nInvoice Date: 2026-04-12\nPayment terms: Net 30","expected_type":"invoice","expected_fields":{"vendor":"Northstar Supplies","invoice_number":"INV-205"}},
+    {"name":"invoice_unparseable_total","text":"INVOICE\nVendor: Cedar Works\nInvoice No: CW-2\nTotal: TBD","expected_type":"invoice","expected_fields":{"vendor":"Cedar Works","invoice_number":"CW-2"}},
+    {"name":"po_basic","text":"PURCHASE ORDER\nSupplier: Acme Ltd\nPO Number: PO-100\nOrder Date: 2026-01-01\nOrder Total: INR 1250","expected_type":"purchase_order","expected_fields":{"vendor":"Acme Ltd","purchase_order_number":"PO-100","total_amount":"1,250.00"}},
+    {"name":"po_rs_currency","text":"PURCHASE ORDER\nVendor: Beacon Co\nPO No: 48\nTotal: Rs. 2,750","expected_type":"purchase_order","expected_fields":{"vendor":"Beacon Co","purchase_order_number":"48","total_amount":"2,750.00"}},
+    {"name":"po_missing_vendor","text":"PURCHASE ORDER\nPO Number: PO-9\nOrder Total: INR 500","expected_type":"purchase_order","expected_fields":{"purchase_order_number":"PO-9","total_amount":"500.00"}},
+    {"name":"delivery_complete","text":"DELIVERY NOTE\nVendor: Acme Ltd\nPO Number: PO-100\nDelivery Date: 2026-01-04","expected_type":"delivery_note","expected_fields":{"vendor":"Acme Ltd","purchase_order_number":"PO-100"}},
+    {"name":"delivery_without_po","text":"DELIVERY NOTE\nVendor: Beacon Co\nDate: 2026-01-06\nItems delivered: 8 boxes","expected_type":"delivery_note","expected_fields":{"vendor":"Beacon Co"}},
+    {"name":"email_headers","text":"From: buyer@example.com\nTo: sales@example.com\nSubject: Delivery question\nPlease send the order update.","expected_type":"email","expected_fields":{"vendor":"buyer@example.com"}},
+    {"name":"email_subject_only","text":"Subject: Re: payment confirmation\nThe transfer was sent yesterday.","expected_type":"email","expected_fields":{}},
+    {"name":"policy_effective_date","text":"EXPENSE POLICY\nEffective Date: 2026-01-01\nReceipts are required.","expected_type":"policy","expected_fields":{"document_date":"2026-01-01"}},
+    {"name":"policy_no_date","text":"POLICY\nCoverage excludes pre-existing damage.","expected_type":"policy","expected_fields":{}},
+    {"name":"unknown_note","text":"Please call me when you have a chance.","expected_type":"unknown","expected_fields":{}},
+    {"name":"unknown_amount_context","text":"Budget estimate\nTotal: 1500 USD","expected_type":"unknown","expected_fields":{"total_amount":"1,500.00"}},
+    {"name":"ambiguous_invoice_po","text":"INVOICE\nPURCHASE ORDER\nTotal: INR 100","expected_type":"unknown","expected_fields":{"total_amount":"100.00"}},
+    {"name":"invoice_rupee_symbol","text":"INVOICE\nVendor: Cedar Works\nInvoice No: CW-3\nGrand Total: ₹8,900","expected_type":"invoice","expected_fields":{"vendor":"Cedar Works","total_amount":"8,900.00"}},
+    {"name":"po_po_hash","text":"PURCHASE ORDER\nSupplier: Elm Group\nPO #: EG-55\nOrder Total: INR 9,000","expected_type":"purchase_order","expected_fields":{"vendor":"Elm Group","purchase_order_number":"EG-55","total_amount":"9,000.00"}},
+    {"name":"policy_with_invoice_reference","text":"TRAVEL POLICY\nEffective Date: 2026-02-01\nExample: reimburse invoice copies within 30 days.","expected_type":"policy","expected_fields":{"document_date":"2026-02-01"}},
+    {"name":"ocr_unknown","text":"INVO1CE\nVndor: ???\nT0tal: ???","expected_type":"unknown","expected_fields":{}}
+  ],
+  "comparisons": [
+    {"name":"seeded_conflict","invoice":"INVOICE\nVendor: Northstar Supplies\nInvoice No: INV-204\nGrand Total: INR 52,400","purchase_order":"PURCHASE ORDER\nSupplier: Northstar Supplies\nPO Number: PO-778\nOrder Total: INR 48,000","expected_status":"MISMATCH"},
+    {"name":"same_total","invoice":"INVOICE\nVendor: Northstar Supplies\nInvoice No: INV-204\nGrand Total: INR 48,000","purchase_order":"PURCHASE ORDER\nSupplier: Northstar Supplies\nPO Number: PO-778\nOrder Total: INR 48,000","expected_status":"MATCH"},
+    {"name":"missing_po_total","invoice":"INVOICE\nVendor: Northstar Supplies\nInvoice No: INV-204\nGrand Total: INR 48,000","purchase_order":"PURCHASE ORDER\nPO Number: PO-778","expected_status":"INSUFFICIENT_DATA"}
+  ]
+}

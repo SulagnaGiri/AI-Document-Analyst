@@ -1,0 +1,9 @@
+TAX INVOICE
+Vendor: Northstar Supplies
+Invoice No: INV-204
+Invoice Date: 2026-04-10
+Purchase Order: PO-778
+Subtotal: INR 44,400
+Tax: INR 8,000
+Grand Total: INR 52,400
+Payment Due: 2026-05-10

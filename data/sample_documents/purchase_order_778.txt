@@ -1,0 +1,6 @@
+PURCHASE ORDER
+Supplier: Northstar Supplies
+PO Number: PO-778
+Order Date: 2026-04-02
+Order Total: INR 48,000
+Approved by: Finance
