@@ -1,26 +1,35 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
-const API_BASE = 'http://localhost:5001'
+// Requests go to /api/*, which Vite proxies to the Flask backend (see vite.config.js).
+const API_BASE = ''
 
 const SINGLE_DOC_QUESTIONS = [
-  'Total GST',
-  'Who is the supplier?',
-  'What is the amount before tax?',
   'Summarize this document',
+  'What information is missing?',
+  'Are there any inconsistencies?',
+  'What are the key dates and amounts?',
 ]
 
 const MULTI_DOC_QUESTIONS = [
   'Does this invoice match the purchase order?',
   'Was everything on the PO delivered?',
   'What is the customer asking about?',
-  'What is missing from the partial invoice?',
+  'Which documents refer to the same order?',
 ]
 
-const STATUS_NOTES = {
-  not_configured: 'NVIDIA_API_KEY is not set, so a rule-based answer was used.',
-  request_failed_or_invalid_response: 'The NVIDIA request failed (see the backend terminal), so a rule-based answer was used.',
-  response_unsupported_or_uncited: 'The model could not back its answer with a quote from the documents, so a rule-based answer was used.',
+const VERIFICATION = {
+  verified: { label: 'Verified', tone: 'badge-ok' },
+  partially_verified: { label: 'Partly verified', tone: 'badge-warn' },
+  unverified: { label: 'Unverified', tone: 'badge-error' },
+  not_in_documents: { label: 'Not in documents', tone: 'badge-muted' },
+}
+
+function formatLines(lines) {
+  if (!lines?.length) return ''
+  const first = lines[0]
+  const last = lines[lines.length - 1]
+  return lines.length > 1 && last - first === lines.length - 1 ? `L${first}–L${last}` : lines.map((n) => `L${n}`).join(', ')
 }
 
 let nextId = 1
@@ -143,18 +152,38 @@ function AnalysisView({ analysis }) {
     <div>
       <p className="summary">{analysis.summary}</p>
       <p className="analysis-source">
-        {analysis.analysis_source === 'nvidia' ? 'Extracted by the model' : 'Extracted by keyword rules (model unavailable)'}
+        Extracted by the model · each field checked against the line it cites
       </p>
       {fields.length > 0 && (
         <dl className="field-grid">
           {fields.map(([key, value]) => (
-            <div key={key} className="field">
-              <dt>{formatLabel(key)}</dt>
-              <dd>{value.value}</dd>
-              {value.evidence && <dd className="evidence" title={value.evidence}>“{formatQuote(value.evidence)}”</dd>}
+            <div key={key} className={`field ${value.verified === false ? 'unverified' : ''}`}>
+              <dt>
+                {formatLabel(key)}
+                {value.verified === false && <span className="tag" title="The value was not found on the line the model cited">unverified</span>}
+              </dt>
+              <dd title={value.value}>{value.value}</dd>
+              {value.evidence && (
+                <dd className="evidence" title={value.evidence}>
+                  {value.lines?.length > 0 && <span className="line-ref">{formatLines(value.lines)}</span>} “{formatQuote(value.evidence)}”
+                </dd>
+              )}
             </div>
           ))}
         </dl>
+      )}
+      {analysis.inconsistencies?.length > 0 && (
+        <div className="notice notice-error">
+          <strong>Inconsistencies</strong>
+          <ul>
+            {analysis.inconsistencies.map((item) => (
+              <li key={item.issue}>
+                {item.issue}
+                {item.source === 'code' && <span className="tag">checked by code</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {analysis.missing_questions?.length > 0 && (
         <div className="notice notice-warn">
@@ -172,7 +201,8 @@ function ChatMessage({ message }) {
   const sourceLabel = {
     nvidia: `Answered by ${(response.model || 'NVIDIA').split('/').pop()}`,
     verified_comparison: 'Verified comparison',
-  }[source] || 'Rule-based fallback'
+  }[source]
+  const verification = VERIFICATION[response.verification]
   return (
     <div className="turn">
       <div className="bubble bubble-user">{message.question}</div>
@@ -185,16 +215,17 @@ function ChatMessage({ message }) {
             {response.citations.map((citation, index) => (
               <blockquote key={`${citation.document}-${index}`} title={citation.quote}>
                 {formatQuote(citation.quote)}
-                <cite>{citation.document}</cite>
+                <cite>{citation.document}{citation.lines?.length > 0 && ` · ${formatLines(citation.lines)}`}</cite>
               </blockquote>
             ))}
           </div>
         )}
 
         <div className="meta">
-          <span className={`badge ${source === 'python_rules' ? 'badge-muted' : 'badge-ok'}`}>{sourceLabel}</span>
-          {source === 'python_rules' && STATUS_NOTES[response.llm_status] && (
-            <span className="meta-note">{STATUS_NOTES[response.llm_status]}</span>
+          <span className="badge badge-muted">{sourceLabel}</span>
+          {verification && <span className={`badge ${verification.tone}`}>{verification.label}</span>}
+          {response.verification_note && response.verification !== 'verified' && (
+            <span className="meta-note">{response.verification_note}</span>
           )}
         </div>
       </div>

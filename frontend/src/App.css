@@ -290,6 +290,10 @@ textarea:focus,
   margin: 4px 0 0;
   font-weight: 600;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .field dd.evidence {
@@ -865,4 +869,34 @@ cite {
 .bubble-wide {
   max-width: 100%;
   width: 100%;
+}
+
+/* ---------- Verification ---------- */
+.tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  vertical-align: 1px;
+}
+
+.notice-error .tag {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.field.unverified {
+  outline: 1px dashed var(--border-strong);
+  background: transparent;
+}
+
+.line-ref {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  color: var(--accent);
 }
