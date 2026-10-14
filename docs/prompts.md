@@ -63,7 +63,7 @@ Answers were accepted only if a citation `quote` was an exact substring of the d
 * Product names contain inch marks (`SEC 48"TRUST`). About one reply in three had an unescaped `"`, so the JSON failed to parse.
 * The model wrote `"document": "Invoice"` instead of the real file name.
 
-We patched each one (allowing multi-line quotes, "include the label next to the figure", unescaping `\"`). Each patch fixed one case and the next question found another. The team's feedback at this point was that the process was **fragile and too focused on one invoice**, and that was correct.
+I patched each one (allowing multi-line quotes, "include the label next to the figure", unescaping `\"`). Each patch fixed one case and the next question found another. My conclusion at this point was that the process was **fragile and too focused on one invoice**, and that was correct.
 
 ---
 

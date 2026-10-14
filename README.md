@@ -15,7 +15,7 @@ A company receives documents from customers and suppliers in many formats. Build
 
 The headline challenge: given deliberately conflicting documents (an invoice for ₹52,400 against a purchase order for ₹48,000), the system must **report the discrepancy instead of blindly generating an answer**.
 
-### Our understanding of the problem
+### My understanding of the problem
 
 * The input is **open-ended**: one type of document arrives in many layouts (label:value text, GST tables with CGST/SGST columns, letters, OCR-damaged scans, other languages). Keyword rules written for one layout do not carry over, so understanding has to come from an LLM.
 * The output has to be **trustworthy**: a finance team cannot act on a number unless it can see where it came from. Every extracted value and answer therefore carries a citation to the exact document lines, and **code** verifies those citations.
@@ -93,13 +93,9 @@ python evaluation/run_eval.py
 | `NVIDIA_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | Any chat model on the NVIDIA API that supports JSON mode |
 | `PORT` | `5001` | Backend port (the frontend proxies `/api` to it) |
 
-## Team members
+## Author
 
-> **TODO:** add names and roles.
-
-| Name | Role |
-|---|---|
-| | |
+Sulagna Giri (individual submission)
 
 ## Live application
 
@@ -107,13 +103,13 @@ Not deployed. Run locally as above.
 
 ## Demo
 
-> **TODO (team):** add the demo video or screenshots link here.
+> **TODO:** add the demo video or screenshots link here.
 
 ## Repository guide
 
 | Path | What it is |
 |---|---|
-| [`docs/design.md`](docs/design.md) | **Solution design**: decomposition, architecture diagram, where we use the LLM vs code, trade-offs |
+| [`docs/design.md`](docs/design.md) | **Solution design**: decomposition, architecture diagram, where the LLM is used vs code, trade-offs |
 | [`docs/prompts.md`](docs/prompts.md) | **Prompt engineering**: V1 → problem → V2 → … → final prompts, and why |
 | [`docs/evaluation.md`](docs/evaluation.md) | **Evaluation results** on the 45-case test set |
 | [`docs/failure_cases.md`](docs/failure_cases.md) | **Failure cases and improvements** (18 cases, 6 found by the evaluation) |

@@ -93,7 +93,7 @@ Results are cached per document text, so analyzing then comparing does not call 
 | Citation and value verification (`grounding.py`) | It must be exact and cannot be talked out of a result. |
 | Invoice vs PO status (`checks.compare_documents`) | The assignment's challenge is to *not* blindly generate MATCH. In a test, a mocked model claims the invoice total is 48,000 while citing the 52,400 line; code rejects the value and the result is not a false MATCH. |
 | Arithmetic consistency (subtotal + tax = total) | LLMs are unreliable at arithmetic; code is exact. |
-| Required fields per document type | Configuration that the team controls, not model behaviour. |
+| Required fields per document type | Configuration I control, not model behaviour. |
 | PDF text extraction | Deterministic; layout mode keeps table rows on one line. |
 
 ## 5. Key engineering decisions and trade-offs
