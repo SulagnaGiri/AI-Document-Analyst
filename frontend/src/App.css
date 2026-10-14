@@ -25,10 +25,11 @@
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: linear-gradient(135deg, #1e6bf0, #0284c7);
+  color: #ffffff;
   font-weight: 700;
   letter-spacing: 0.02em;
+  box-shadow: 0 4px 14px rgba(30, 107, 240, 0.28);
 }
 
 h1 {
@@ -104,10 +105,12 @@ h1 {
 .btn-primary {
   background: var(--accent);
   color: var(--on-accent);
+  box-shadow: 0 2px 6px rgba(30, 107, 240, 0.2);
 }
 
 .btn-primary:not(:disabled):hover {
   background: var(--accent-strong);
+  box-shadow: 0 4px 12px rgba(30, 107, 240, 0.3);
 }
 
 .btn-ghost {
@@ -156,6 +159,7 @@ h1 {
 .badge-accent {
   background: var(--accent-soft);
   color: var(--accent);
+  border: 1px solid rgba(30, 107, 240, 0.2);
   text-transform: capitalize;
 }
 
@@ -395,12 +399,15 @@ textarea:focus,
   background: var(--accent);
   color: var(--on-accent);
   border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 8px rgba(30, 107, 240, 0.2);
 }
 
 .bubble-bot {
   align-self: flex-start;
-  background: var(--surface-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 3px rgba(13, 33, 58, 0.04);
 }
 
 .answer {
@@ -599,8 +606,9 @@ cite {
 }
 
 .doc-row.active {
-  background: var(--surface-2);
-  border-color: var(--border);
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+  color: var(--accent-strong);
 }
 
 .doc-row .file-icon {
@@ -900,3 +908,159 @@ cite {
   font-size: 0.72rem;
   color: var(--accent);
 }
+
+/* ---------- Login Page ---------- */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background: radial-gradient(circle at 50% 15%, #e9f2fe 0%, #f3f7fc 85%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 48px 40px;
+  box-shadow: 0 16px 40px rgba(13, 33, 58, 0.09), 0 2px 8px rgba(13, 33, 58, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.login-header .logo {
+  width: 60px;
+  height: 60px;
+  font-size: 1.45rem;
+  border-radius: 16px;
+  margin-bottom: 2px;
+}
+
+.login-header h1 {
+  font-size: 1.75rem;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.login-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-group input {
+  font: inherit;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 16px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 1rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3.5px rgba(30, 107, 240, 0.15);
+}
+
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrap input {
+  padding-right: 70px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.password-toggle:hover {
+  color: var(--accent);
+}
+
+.login-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 14px;
+  font-size: 1.05rem;
+  font-weight: 650;
+  border-radius: 12px;
+  margin-top: 6px;
+}
+
+/* ---------- User Nav in Header ---------- */
+.user-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.user-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+}
+

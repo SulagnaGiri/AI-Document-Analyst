@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import Login from './Login'
 import './App.css'
 
 // Requests go to /api/*, which Vite proxies to the Flask backend (see vite.config.js).
@@ -234,6 +235,9 @@ function ChatMessage({ message }) {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('docwise_auth') === 'true'
+  })
   const [health, setHealth] = useState(null)
   const [documents, setDocuments] = useState([])
   const [selectedId, setSelectedId] = useState(null)
@@ -383,6 +387,20 @@ function App() {
     onDrop: (event) => { event.preventDefault(); setDragging(false); loadFiles(event.dataTransfer.files) },
   }
 
+  const handleLogin = () => {
+    localStorage.setItem('docwise_auth', 'true')
+    setIsAuthenticated(true)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('docwise_auth')
+    setIsAuthenticated(false)
+  }
+
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -393,7 +411,11 @@ function App() {
             <p className="subtitle">Classify, extract, cross-check and question invoices, POs, emails, policies and delivery notes</p>
           </div>
         </div>
-        <ModelBadge health={health} />
+        <div className="user-nav">
+          <ModelBadge health={health} />
+          <span className="user-badge"><span className="user-dot" /> admin</span>
+          <button type="button" className="btn btn-ghost" onClick={handleLogout}>Log out</button>
+        </div>
       </header>
 
       <input ref={fileInput} type="file" hidden multiple accept=".txt,.md,.eml,.html,.pdf"
