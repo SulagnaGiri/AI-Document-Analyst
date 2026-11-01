@@ -1454,108 +1454,21 @@ The project includes an automated evaluation suite:
 python evaluation/run_eval.py
 ```
 
-This evaluation:
-
-- Calls the live model.
-- Runs the document analysis pipeline.
-- Tests document comparison.
-- Evaluates question-answering behavior.
-- Measures performance across predefined cases.
-- Writes evaluation results to `docs/evaluation.md`.
-
-**Requirements:**
-
-- A valid NVIDIA API key.
-- Correct environment configuration.
-- Network access to the NVIDIA NIM API.
-
-**Expected execution time:** Approximately 10 minutes.
-
-## 17.3 Evaluation Dataset
-
-The benchmark contains 45 test cases.
-
-| Category | Number of Cases |
-|---|---:|
-| Document Analysis | 24 |
-| Document Comparison | 7 |
-| Question Answering | 14 |
-| **Total** | **45** |
-
-The cases include:
-
-- Normal scenarios.
-- Edge cases.
-- Ambiguous documents.
-- Failure scenarios.
-
-## 17.4 Failure Case Analysis
-
-The project maintains a separate failure-case document:
-
-```text
-docs/failure_cases.md
-```
-
-It documents 19 failure cases, including 6 cases identified through evaluation.
-
-## 17.5 Evaluation Documentation
-
-Evaluation results are stored in:
-
-```text
-docs/evaluation.md
-```
-
-The benchmark execution script is:
-
-```text
-evaluation/run_eval.py
-```
-
----
-
-# 18. Environment Configuration
-
-The application uses environment variables to manage API credentials, multi-key pools, and runtime configuration.
-
-| Setting | Default | Purpose |
+| Setting (`.env`) | Default | Purpose |
 |---|---|---|
-| `GEMINI_API_KEYS` | Optional (Primary) | Comma-separated pool of Gemini API keys for automatic round-robin and rate-limit failover (e.g. 10 keys). |
-| `GEMINI_API_KEY` | Optional | Single Google Gemini API key (or multiple repeated lines). |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Selects Google Gemini model (`gemini-2.5-flash`, `gemini-1.5-flash`, etc.). |
-| `LLM_PROVIDER` | `gemini` (auto) | Provider selection: `gemini` or `nvidia`. Auto-detects based on available keys. |
-| `NVIDIA_API_KEY` | Optional (Alternative) | NVIDIA NIM API authentication. |
-| `NVIDIA_MODEL` | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Selects the NVIDIA API chat model supporting JSON mode. |
-| `PORT` | `5001` | Configures the backend server port. |
+| `NVIDIA_API_KEY` | (required) | NVIDIA API key |
+| `NVIDIA_MODEL` | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Any chat model on the NVIDIA API that supports JSON mode |
+| `PORT` | `5001` | Backend port (the frontend proxies `/api` to it) |
 
-### Multi-Key Gemini Configuration
+## Author
 
-When multiple Gemini keys are provided (e.g. 10 keys), the client maintains a thread-safe round-robin pool. If any key encounters an HTTP 429 (Rate Limit) or quota exhaustion, it automatically fails over to the next key in the pool without interrupting the user request.
+Sulagna Giri (individual submission)
 
-### Example `.env`
+## Live application
 
-```env
-# Multi-key Gemini configuration (recommended for high throughput / free-tier quotas)
-GEMINI_API_KEYS=AIzaSy...,AIzaSy...,AIzaSy...
-GEMINI_MODEL=gemini-2.5-flash
+> **TODO:** add the Vercel URL once deployed.
 
-# Or provide them individually:
-# GEMINI_API_KEY_1=AIzaSy...
-# GEMINI_API_KEY_2=AIzaSy...
-
-# Alternative: NVIDIA NIM
-# NVIDIA_API_KEY=your_nvidia_api_key
-# NVIDIA_MODEL=nvidia/nemotron-3.5-super-vl-120b-a12b
-
-PORT=5001
-```
-
-Never commit the actual `.env` file or expose API credentials in frontend code or public repositories.
-
----
-
-# 19. Deployment on Vercel
+### Deploying to Vercel
 
 The application is designed to deploy as a single Vercel project.
 
@@ -1639,173 +1552,19 @@ The following deployment constraints apply to the documented setup:
 
 | Configuration | Details |
 |---|---|
-| Platform | Vercel |
-| Backend | Flask Python serverless function |
-| Frontend | Static production build |
-| Maximum execution duration | Up to 300 seconds through `maxDuration` |
-| Initial request | May take 1–2 minutes after idle while the model warms up |
-| Upload limit | 4.5 MB under the documented Vercel configuration |
-
-The 300-second execution limit is the Hobby-plan maximum specified in the original deployment configuration. Actual platform limits depend on the selected Vercel plan and deployment settings.
-
----
-
-# 20. Security & Reliability Considerations
-
-The system uses multiple mechanisms to improve reliability and protect sensitive application configuration.
-
-### 20.1 API Key Protection
-
-- NVIDIA API credentials are stored in environment variables.
-- The `.env` file should not be committed to GitHub.
-- API credentials should remain on the backend.
-- Frontend code should never expose the NVIDIA API key.
-
-### 20.2 Prompt Injection Defense
-
-- Uploaded documents are treated as untrusted input.
-- Embedded instructions are treated as document content.
-- The model is instructed not to follow instructions found inside uploaded documents.
-
-### 20.3 Citation Validation
-
-- Model-generated line references are resolved against actual document lines.
-- Invalid citations are not treated as verified evidence.
-- Extracted values are checked against their cited lines.
-
-### 20.4 Deterministic Financial Validation
-
-- Financial arithmetic uses `Decimal`.
-- Only verified values enter reconciliation.
-- Missing verified data results in `INSUFFICIENT_DATA`.
-
-### 20.5 API Resilience
-
-- JSON response sanitization.
-- Retry handling.
-- Required schema-key validation.
-- Concurrent document processing.
-- Content-based caching.
-
-### 20.6 Document Privacy
-
-Uploaded business documents may contain confidential financial or commercial information. Production deployment should include appropriate access control, secure transport, retention policies, and protected storage.
-
----
-
-# 21. Known Limitations & Future Improvements
-
-The current architecture provides document analysis, evidence verification, and reconciliation. Several areas can be expanded in future versions.
-
-### Potential Improvements
-
-**1. OCR Integration**
-
-Add dedicated OCR processing for scanned PDFs and image-based documents.
-
-**2. Improved Table Extraction**
-
-Introduce specialized table extraction to handle complex financial tables, merged cells, and multi-page tables more reliably.
-
-**3. Multilingual Document Support**
-
-Expand testing and support for documents containing Bengali, Hindi, and other languages.
-
-**4. Advanced Document Matching**
-
-Improve matching across invoices, purchase orders, delivery notes, and related email conversations.
-
-**5. Database Integration**
-
-Introduce persistent storage for uploaded documents, extracted fields, analysis results, and audit history.
-
-**6. Authentication and Authorization**
-
-Add user authentication, role-based access control, and organization-level document isolation.
-
-**7. Document Version Tracking**
-
-Track document revisions and identify changes between different versions.
-
-**8. Advanced Evaluation**
-
-Expand the benchmark dataset and measure extraction accuracy, citation precision, reconciliation accuracy, and unsupported-answer rates separately.
-
-**9. Production Monitoring**
-
-Introduce structured logging, performance monitoring, API usage tracking, and failure alerts.
-
-**10. Human-in-the-Loop Review**
-
-Allow finance teams to review and approve flagged discrepancies before taking business action.
-
----
-
-# 22. Author
-
-**Sulagna Giri**
-
-Individual Submission
-
----
-
-# 23. Live Application
-
-> **TODO:** Add the Vercel deployment URL once the application is deployed.
-
-**Live Application:** Coming Soon
-
----
-
-# 24. Demo
-
-> **TODO:** Add the demo video or screenshots link here.
-
-The demonstration should cover:
-
-1. Loading the sample document set.
-2. Uploading multiple business documents.
-3. Document classification.
-4. Extracted field visualization.
-5. Evidence and citation verification.
-6. Invoice vs. purchase order reconciliation.
-7. Detection of the ₹4,400 discrepancy.
-8. Asking questions across uploaded documents.
-9. Reviewing verification labels.
-
----
-
-# 25. Repository Guide
-
-The following files contain the main implementation, architecture, prompts, evaluation results, and testing resources.
-
-| File / Directory | Description |
-|---|---|
-| `docs/design.md` | **Solution design:** Architecture decomposition, system design, LLM responsibilities, deterministic verification, and technical trade-offs. |
-| `docs/prompts.md` | **Prompt engineering:** Prompt evolution from V1 through the final version, including identified problems and improvements. |
-| `docs/evaluation.md` | **Evaluation results:** Performance results from the 45-case benchmark. |
-| `docs/failure_cases.md` | **Failure analysis:** Documentation of 19 failure cases, including 6 discovered during evaluation. |
-| `docs/ai_usage.md` | **AI usage:** Documentation of AI-assisted development. |
-| `pipeline.py` | Core analysis, Q&A, comparison workflows, and prompts. |
-| `grounding.py` | Numbered-line context, citation resolution, value verification, and answer confidence labels. |
-| `checks.py` | Deterministic validation logic, invoice vs. PO comparison, and subtotal-plus-tax calculations. |
-| `document_types.py` | Document type definitions, supported fields, and required fields configuration. |
-| `llm_client.py` | NVIDIA API client, JSON mode, retry handling, and error logging. |
-| `app.py` | Flask API, document upload, PDF text extraction, and backend application logic. |
-| `frontend/` | React frontend application and user interface. |
-| `evaluation/cases.json` | Benchmark dataset containing 24 analysis, 7 comparison, and 14 Q&A cases. |
-| `evaluation/run_eval.py` | Executes live model evaluation and generates `docs/evaluation.md`. |
-| `tests/` | Unit tests covering deterministic functionality and pipeline behavior. |
-| `data/sample_documents/` | Sample business documents, including the seeded invoice and purchase order conflict. |
-
----
-
-# Final Architecture Principle
-
-The most important principle behind AI Document Analyst is the separation of AI reasoning from deterministic verification.
-
-**The LLM understands. The verification engine checks. The business logic decides. The user sees the evidence.**
-
-This approach makes the system more transparent and suitable for business workflows where accuracy, traceability, and accountability matter.
-
-**AI Document Analyst — Turning Unstructured Business Documents into Verified, Actionable Intelligence.**
+| [`docs/design.md`](docs/design.md) | **Solution design**: decomposition, architecture diagram, where the LLM is used vs code, trade-offs |
+| [`docs/prompts.md`](docs/prompts.md) | **Prompt engineering**: V1 → problem → V2 → … → final prompts, and why |
+| [`docs/evaluation.md`](docs/evaluation.md) | **Evaluation results** on the 45-case test set |
+| [`docs/failure_cases.md`](docs/failure_cases.md) | **Failure cases and improvements** (19 cases, 6 found by the evaluation) |
+| [`docs/ai_usage.md`](docs/ai_usage.md) | **AI usage** during development |
+| [`pipeline.py`](pipeline.py) | Analysis, Q&A and comparison; all prompts |
+| [`grounding.py`](grounding.py) | Numbered-line context, citation and value verification, answer labels |
+| [`checks.py`](checks.py) | Deterministic checks: invoice vs PO, subtotal + tax = total |
+| [`document_types.py`](document_types.py) | Document types, their fields and required fields (configuration) |
+| [`llm_client.py`](llm_client.py) | NVIDIA API client (JSON mode, retry, error logging) |
+| [`app.py`](app.py) | Flask API and PDF text extraction |
+| [`frontend/`](frontend) | React UI |
+| [`evaluation/cases.json`](evaluation/cases.json) | Test set: 24 analysis, 7 comparison and 14 Q&A cases (normal, edge, ambiguous, failure) |
+| [`evaluation/run_eval.py`](evaluation/run_eval.py) | Scores the live pipeline and writes `docs/evaluation.md` |
+| [`tests/`](tests) | Unit tests for everything code is responsible for |
+| [`data/sample_documents/`](data/sample_documents) | Demo document set with the seeded invoice / PO conflict |

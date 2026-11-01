@@ -89,9 +89,13 @@ def upload_document():
     data = file.read()
     if filename.lower().endswith(".pdf"):
         try:
-            return jsonify({"name": filename, "text": pdf_to_text(data)})
+            text = pdf_to_text(data)
         except Exception as exc:
             return jsonify({"error": f"Could not parse PDF: {exc}"}), 400
+        if not text.strip():
+            # Image-only PDFs (scans, photos, slides exported as pictures) have no text layer.
+            return jsonify({"error": "This PDF has no selectable text (it looks scanned or image-based), so it cannot be analyzed. Use a text-based PDF, or paste the text instead."}), 422
+        return jsonify({"name": filename, "text": text})
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError:

@@ -21,6 +21,8 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 # --- NVIDIA configuration ---
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY")
 NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3.5-super-vl-120b-a12b")
+# Used when the main model stalls or is unavailable. Set to "" to disable.
+NVIDIA_FALLBACK_MODEL = os.environ.get("NVIDIA_FALLBACK_MODEL", "nvidia/nemotron-3-ultra-550b-a55b")
 NVIDIA_API_URL = os.environ.get("NVIDIA_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
 
 # --- Gemini configuration ---
@@ -181,12 +183,13 @@ def call_llm(system: str, prompt: str, required_keys: tuple[str, ...] = (), atte
                 headers={"Authorization": f"Bearer {current_key}", "Content-Type": "application/json"},
                 method="POST",
             )
-            with urlopen(request, timeout=180) as response:
+            with urlopen(request, timeout=NVIDIA_TIMEOUT) as response:
                 data = json.loads(response.read().decode("utf-8"))
 
             content = data["choices"][0]["message"]["content"] or ""
             parsed = json.loads(_clean_json_text(content))
             if isinstance(parsed, dict) and all(key in parsed for key in required_keys):
+                parsed["_model"] = model
                 return parsed
             log.warning("%s returned incomplete JSON (attempt %s/%s)", provider, attempt, total_tries)
         except json.JSONDecodeError:

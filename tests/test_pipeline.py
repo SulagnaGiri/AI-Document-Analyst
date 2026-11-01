@@ -5,6 +5,7 @@ import json
 import os
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 import app
 import grounding
@@ -259,7 +260,7 @@ class LlmClientTests(unittest.TestCase):
 
     def test_uses_json_mode_and_auth(self):
         with llm_on(), patch("llm_client.urlopen", return_value=self.reply('{"ok": true}')) as mocked:
-            self.assertEqual(llm_client.call_llm("sys", "Return JSON"), {"ok": True})
+            self.assertEqual(llm_client.call_llm("sys", "Return JSON"), {"ok": True, "_model": llm_client.NVIDIA_MODEL})
         request = mocked.call_args.args[0]
         self.assertEqual(request.get_header("Authorization"), "Bearer test-token")
         self.assertEqual(json.loads(request.data)["response_format"], {"type": "json_object"})
@@ -267,7 +268,7 @@ class LlmClientTests(unittest.TestCase):
     def test_invalid_json_is_retried_once(self):
         broken = '{"answer": "SEC 48"TRUST HIGHSPEED"}'
         with llm_on(), patch("llm_client.urlopen", side_effect=[self.reply(broken), self.reply('{"answer": "ok"}')]) as mocked:
-            self.assertEqual(llm_client.call_llm("sys", "p"), {"answer": "ok"})
+            self.assertEqual(llm_client.call_llm("sys", "p"), {"answer": "ok", "_model": llm_client.NVIDIA_FALLBACK_MODEL})
         self.assertEqual(mocked.call_count, 2)
 
     def test_incomplete_reply_is_retried(self):
@@ -278,13 +279,46 @@ class LlmClientTests(unittest.TestCase):
         self.assertEqual(result["document_type"], "invoice")
         self.assertEqual(mocked.call_count, 2)
 
+    def test_stalled_main_model_falls_back_then_retries_main(self):
+        with llm_on(), patch("llm_client.urlopen", side_effect=[
+            TimeoutError("timed out"), TimeoutError("timed out"), self.reply('{"answer": "ok"}'),
+        ]) as mocked:
+            result = llm_client.call_llm("sys", "p")
+        self.assertEqual(result["answer"], "ok")
+        self.assertEqual(result["_model"], llm_client.NVIDIA_MODEL)
+        models = [json.loads(call.args[0].data)["model"] for call in mocked.call_args_list]
+        self.assertEqual(models, [llm_client.NVIDIA_MODEL, llm_client.NVIDIA_FALLBACK_MODEL, llm_client.NVIDIA_MODEL])
+
+    def test_one_stall_is_answered_by_the_fallback(self):
+        with llm_on(), patch("llm_client.urlopen", side_effect=[TimeoutError("timed out"), self.reply('{"answer": "ok"}')]):
+            self.assertEqual(llm_client.call_llm("sys", "p")["_model"], llm_client.NVIDIA_FALLBACK_MODEL)
+
+    def test_withdrawn_model_goes_straight_to_fallback(self):
+        gone = HTTPError("url", 404, "Not Found", {}, io.BytesIO(b"Function not found"))
+        with llm_on(), patch("llm_client.urlopen", side_effect=[gone, self.reply('{"answer": "ok"}')]) as mocked:
+            result = llm_client.call_llm("sys", "p")
+        self.assertEqual(result["_model"], llm_client.NVIDIA_FALLBACK_MODEL)
+        self.assertEqual(mocked.call_count, 2)
+
+    def test_bad_key_does_not_try_other_models(self):
+        denied = HTTPError("url", 401, "Unauthorized", {}, io.BytesIO(b"bad key"))
+        with llm_on(), patch("llm_client.urlopen", side_effect=[denied]) as mocked:
+            self.assertIsNone(llm_client.call_llm("sys", "p"))
+        self.assertEqual(mocked.call_count, 1)
+
     def test_think_block_and_fences_are_stripped(self):
         content = '<think>CGST plus SGST...</think>\n```json\n{"answer": "73469"}\n```'
         with llm_on(), patch("llm_client.urlopen", return_value=self.reply(content)):
-            self.assertEqual(llm_client.call_llm("sys", "p"), {"answer": "73469"})
+            self.assertEqual(llm_client.call_llm("sys", "p")["answer"], "73469")
 
 
 class PdfTests(unittest.TestCase):
+    def test_image_only_pdf_is_rejected_with_a_clear_message(self):
+        with patch("app.pdf_to_text", return_value="  \n "):
+            response = app.app.test_client().post("/api/upload", data={"file": (io.BytesIO(b"%PDF"), "scan.pdf")})
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("no selectable text", response.get_json()["error"])
+
     def test_column_gaps_become_separators(self):
         class Page:
             def extract_text(self, extraction_mode=None):
