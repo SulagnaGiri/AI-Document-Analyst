@@ -1,29 +1,29 @@
 {
-  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
   "metrics": {
     "classification_accuracy": 100.0,
     "field_extraction_accuracy": 100.0,
     "field_correct_and_verified": 98.3,
-    "grounded_field_rate": 97.4,
+    "grounded_field_rate": 97.7,
     "missing_info_recall": 100.0,
     "inconsistency_recall": 100.0,
-    "inconsistency_false_positive_rate": 0.0,
+    "inconsistency_false_positive_rate": 5.0,
     "no_fields_on_garbage": 100.0,
     "comparison_status_accuracy": 100.0,
-    "qa_accuracy": 92.9,
+    "qa_accuracy": 100.0,
     "qa_answers_with_valid_citation": 100.0,
     "type_consistency_across_runs": 100.0,
-    "field_consistency_across_runs": 96.6,
-    "valid_structured_output": 98.7,
+    "field_consistency_across_runs": 100.0,
+    "valid_structured_output": 100.0,
     "llm_unavailable_errors": 0,
-    "avg_seconds_analysis": 11.7,
-    "avg_seconds_qa": 4.9
+    "avg_seconds_analysis": 10.5,
+    "avg_seconds_qa": 4.1
   },
   "analysis": [
     {
       "id": "A01",
       "run": 1,
-      "seconds": 10.3,
+      "seconds": 9.9,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -71,12 +71,12 @@
       "extracted_verified": 9,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This is a tax invoice issued by Bluewave Traders (vendor) for invoice number BW-1182 dated 2026-03-15, referencing purchase order PO-5521. It shows a subtotal of INR 20,000, GST of INR 3,600 (18%), and a grand total of INR 23,600, with payment due on 2026-04-14. The buyer and line‑item details are not specified."
+      "summary": "This is a tax invoice issued by Bluewave Traders (invoice BW-1182) dated 2026-03-15, referencing purchase order PO-5521. It lists an INR 20,000 subtotal with INR 3,600 GST (18%), for a grand total of INR 23,600, with payment due by 2026-04-14."
     },
     {
       "id": "A02",
       "run": 1,
-      "seconds": 29.9,
+      "seconds": 11.4,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -124,12 +124,12 @@
       "extracted_verified": 7,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This is a tax invoice from SHREE GANESH ELECTRICALS to MODERN HOME STORES, invoice number GE/2026/0412 dated 12-05-2026. It lists three items (LED bulbs, ceiling fans, extension boards) with a subtotal of ₹40,000, CGST and SGST of ₹3,600 each, and a total amount payable of ₹47,200."
+      "summary": "This is a tax invoice (GE/2026/0412) issued by Shree Ganesh Electricals to Modern Home Stores on 12-05-2026. It bills three items—LED bulbs, ceiling fans, and extension boards—with a subtotal of 40000.00, CGST and SGST of 3600.00 each, and a total payable of 47200.00."
     },
     {
       "id": "A03",
       "run": 1,
-      "seconds": 15.8,
+      "seconds": 20.2,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -171,12 +171,12 @@
       "extracted_verified": 8,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This is an invoice from Northwind Consulting LLC to Contoso Retail Inc. for consulting services, dated April 3, 2026, with a due date of May 3, 2026. It lists two line items totaling $840.00, which matches the total due."
+      "summary": "This document is an invoice issued by Northwind Consulting LLC to Contoso Retail Inc. It is invoice #NW-2026-091, dated April 3, 2026, with payment due May 3, 2026. The invoice charges $840.00 USD for two consulting services: data pipeline review and dashboard fixes."
     },
     {
       "id": "A04",
       "run": 1,
-      "seconds": 14.6,
+      "seconds": 13.6,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -199,12 +199,12 @@
         "total_amount": true
       },
       "inconsistencies": [],
-      "summary": "The document is an invoice issued by Northstar Supplies on 2026-04-12, invoice number INV-205, with payment terms Net 30. The total amount is not shown on this copy, and other details such as buyer, currency, line items, subtotal, and tax are missing."
+      "summary": "This is an invoice (INV-205) issued by vendor Northstar Supplies on 2026-04-12, with payment terms of Net 30. The document explicitly states that the total amount is not shown on this copy. No buyer, currency, line items, subtotal, or tax details are provided."
     },
     {
       "id": "A05",
       "run": 1,
-      "seconds": 17.7,
+      "seconds": 9.1,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -243,10 +243,10 @@
       "extracted_verified": 7,
       "missing_flagged": {},
       "inconsistencies": [
-        "Total amount (INR 12,800) does not equal subtotal (INR 10,000) plus tax (INR 1,800) which sums to INR 11,800",
+        "Subtotal (10,000) plus tax (1,800) equals 11,800, but the stated total is 12,800.",
         "Subtotal ₹10,000.00 + tax ₹1,800.00 = ₹11,800.00, but the stated total is ₹12,800.00."
       ],
-      "summary": "This is an invoice from Cedar Works (vendor) to an unspecified buyer, dated 2026-02-01, for invoice number CW-77. It lists a subtotal of INR 10,000, tax of INR 1,800, and a total of INR 12,800. The total amount does not match the sum of subtotal and tax, indicating a calculation inconsistency."
+      "summary": "This is an invoice (CW-77) issued by Cedar Works on 2026-02-01. It lists a subtotal of INR 10,000, tax of INR 1,800, and a total of INR 12,800. The subtotal plus tax does not equal the stated total."
     },
     {
       "id": "A06",
@@ -268,16 +268,16 @@
           "verified": true
         }
       },
-      "extracted": 6,
-      "extracted_verified": 6,
+      "extracted": 7,
+      "extracted_verified": 7,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is an invoice issued by Lakeview Facility Services to the Accounts Team for an annual maintenance contract delivered in March 2026. It states invoice number 4471 and a total amount payable of Rs. 18,500 inclusive of GST, with payment due within 15 days. No explicit invoice date or due date is provided."
+      "summary": "This document is an invoice (no. 4471) issued by Lakeview Facility Services to the Accounts Team for an annual maintenance contract delivered in March 2026. The total amount payable is Rs. 18,500 inclusive of GST, due within 15 days. The invoice issue date, buyer company name, and any purchase order reference are not stated."
     },
     {
       "id": "A07",
       "run": 1,
-      "seconds": 7.3,
+      "seconds": 9.2,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -301,15 +301,15 @@
         }
       },
       "extracted": 5,
-      "extracted_verified": 4,
+      "extracted_verified": 5,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a tax invoice issued by Om Sai Hardware (vendor) with invoice number OSH-3309 dated 2026-01-19, showing a grand total of INR 9,450."
+      "summary": "This is a tax invoice issued by vendor Om Sai Hardware, invoice number OSH-3309, dated 2O26-01-19. The grand total payable is INR 9,450. The document does not state the buyer, due date, line items, subtotal, or tax amount."
     },
     {
       "id": "A08",
       "run": 1,
-      "seconds": 12.7,
+      "seconds": 7.3,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -339,12 +339,12 @@
       "extracted_verified": 5,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a tax invoice issued by शर्मा ट्रेडर्स (vendor) with invoice number ST-889 dated 05-03-2026. The total amount payable is ₹ 15,340. Other details such as buyer, due date, purchase order reference, subtotal, tax amount, and line items are not provided."
+      "summary": "This is a tax invoice (कर बीजक) issued by शर्मा ट्रेडर्स (Sharma Traders). Invoice number ST-889 was dated 05-03-2026, with a total amount payable of ₹15,340. The document does not list a buyer, line items, subtotal, tax breakdown, or due date."
     },
     {
       "id": "A09",
       "run": 1,
-      "seconds": 6.9,
+      "seconds": 8.6,
       "type": "purchase_order",
       "type_correct": true,
       "fields": {
@@ -380,12 +380,12 @@
       "extracted_verified": 6,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a purchase order issued to supplier Bluewave Traders for PO number PO-5521, dated 2026-03-01. The approved order total is INR 23,600, and it was approved by Finance. No buyer information or line‑item details are provided."
+      "summary": "This is a purchase order (PO-5521) dated 2026-03-01 placed with supplier Bluewave Traders. The approved order total is INR 23,600, and it was approved by Finance. The buyer and the specific goods/services ordered are not stated in the document."
     },
     {
       "id": "A10",
       "run": 1,
-      "seconds": 11.4,
+      "seconds": 13.8,
       "type": "purchase_order",
       "type_correct": true,
       "fields": {
@@ -408,16 +408,16 @@
           "verified": true
         }
       },
-      "extracted": 7,
-      "extracted_verified": 7,
+      "extracted": 8,
+      "extracted_verified": 8,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This is a purchase order from Contoso Retail Inc. to Greenleaf Packaging Pvt Ltd, dated 07/02/2026, for three packaging items totaling INR 21,500.00. The order specifies delivery by 20/02/2026 and does not indicate an approver."
+      "summary": "This is a purchase order (PO No: 4500012873) dated 07/02/2026, issued by buyer Contoso Retail Inc. to vendor Greenleaf Packaging Pvt Ltd. It lists three line items totaling INR 21,500.00, with delivery required by 20/02/2026."
     },
     {
       "id": "A11",
       "run": 1,
-      "seconds": 7.6,
+      "seconds": 8.9,
       "type": "purchase_order",
       "type_correct": true,
       "fields": {
@@ -440,12 +440,12 @@
         "purchase_order_number": true
       },
       "inconsistencies": [],
-      "summary": "This is a purchase order issued to Delta Office Supplies on 2026-05-05 for office supplies. The order includes 10 whiteboard markers and 5 staplers, with a total amount of INR 2,150. No buyer, purchase order number, or approving authority is specified."
+      "summary": "This document is a purchase order issued to supplier Delta Office Supplies on 2026-05-05. It orders 10 whiteboard markers and 5 staplers for a total of INR 2,150. The purchase order number, buyer, and approving authority are not stated."
     },
     {
       "id": "A12",
       "run": 1,
-      "seconds": 10.2,
+      "seconds": 6.2,
       "type": "delivery_note",
       "type_correct": true,
       "fields": {
@@ -475,12 +475,12 @@
       "extracted_verified": 5,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This is a delivery note from Northstar Supplies confirming delivery of 40 office chairs against purchase order PO-778, delivered on 2026-04-08 and received by A. Kumar."
+      "summary": "This document is a delivery note issued by Northstar Supplies for purchase order PO-778. It records the delivery of 40 office chairs on 2026-04-08, received by A. Kumar."
     },
     {
       "id": "A13",
       "run": 1,
-      "seconds": 11.4,
+      "seconds": 12.8,
       "type": "delivery_note",
       "type_correct": true,
       "fields": {
@@ -501,12 +501,12 @@
       "extracted_verified": 5,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This is a delivery note from Greenleaf Packaging Pvt Ltd against PO 4500012873, dated 18/02/2026, confirming delivery of corrugated boxes, bubble wrap, and packing tape. The goods were received by R. Das (Stores)."
+      "summary": "A delivery note / goods receipt issued by Greenleaf Packaging Pvt Ltd against purchase order 4500012873, with delivery date 18/02/2026. It records three items: corrugated boxes (500 delivered of 500 ordered), bubble wrap rolls (12 delivered of 20 ordered, 8 back-ordered), and packing tape (100 delivered of 100 ordered). The goods were received by R. Das (Stores)."
     },
     {
       "id": "A14",
       "run": 1,
-      "seconds": 16.8,
+      "seconds": 12.7,
       "type": "email",
       "type_correct": true,
       "fields": {
@@ -524,15 +524,17 @@
         }
       },
       "extracted": 7,
-      "extracted_verified": 7,
+      "extracted_verified": 6,
       "missing_flagged": {},
-      "inconsistencies": [],
-      "summary": "The document is an email sent from buyer@example.com to accounts@northstar.example on 2026-04-11, with the subject 'Question about invoice INV-204'. The sender reports that the invoice total (INR 52,400) differs from the approved purchase order PO-778 amount (INR 48,000) and asks for confirmation of the correct total before payment. The email references invoice INV-204 and purchase order PO-778."
+      "inconsistencies": [
+        "Invoice INV-204 total (INR 52,400) is higher than purchase order PO-778 approved amount (INR 48,000), a difference of INR 4,400"
+      ],
+      "summary": "This is an email dated 2026-04-11 sent from buyer@example.com to accounts@northstar.example with the subject 'Question about invoice INV-204'. The sender reports that invoice INV-204 lists a total of INR 52,400, while purchase order PO-778 was approved for INR 48,000, and asks for confirmation of the correct total before payment."
     },
     {
       "id": "A15",
       "run": 1,
-      "seconds": 10.3,
+      "seconds": 15.5,
       "type": "email",
       "type_correct": true,
       "fields": {
@@ -549,16 +551,16 @@
           "verified": true
         }
       },
-      "extracted": 5,
-      "extracted_verified": 5,
+      "extracted": 6,
+      "extracted_verified": 6,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is an email from Ananya Sen to the HR team requesting 5 days of earned leave from 20 to 24 April 2026 for a family function, noting that her manager Rahul has already approved it over chat. It includes the sender, recipient, subject, and date."
+      "summary": "This is an email from Ananya Sen (ananya.sen@company.com) to HR (hr@company.com), dated 2026-04-02, requesting 5 days of earned leave from 20 April to 24 April 2026 for a family function. The sender states that her manager Rahul has approved the leave over chat."
     },
     {
       "id": "A16",
       "run": 1,
-      "seconds": 7.8,
+      "seconds": 6.8,
       "type": "email",
       "type_correct": true,
       "fields": {
@@ -575,12 +577,12 @@
         "subject": true
       },
       "inconsistencies": [],
-      "summary": "The document is an email sent from Vikram (vikram@vendor.example) to the procurement team (procurement@company.com) on 2026-06-10, requesting to move tomorrow's supplier review meeting to 3 PM and asking for confirmation. No subject line, purchase order number, or referenced documents are present."
+      "summary": "An email dated 2026-06-10 was sent from vikram@vendor.example to procurement@company.com. The sender requests to move a supplier review meeting scheduled for the next day to 3 PM and asks the recipient to confirm. The message is signed by Vikram."
     },
     {
       "id": "A17",
       "run": 1,
-      "seconds": 11.3,
+      "seconds": 7.5,
       "type": "policy",
       "type_correct": true,
       "fields": {
@@ -604,12 +606,12 @@
       "extracted_verified": 4,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is an expense reimbursement policy effective 2026-01-01. It outlines rules for employees, including a 30‑day receipt submission deadline, manager approval required for expenses over INR 10,000, and a daily meal reimbursement limit of INR 1,500 per person."
+      "summary": "This is an Expense Reimbursement Policy effective 2026-01-01. It requires employees to submit receipts within 30 days, requires manager approval for expenses above INR 10,000, and limits meal reimbursement to INR 1,500 per person per day."
     },
     {
       "id": "A18",
       "run": 1,
-      "seconds": 8.9,
+      "seconds": 13.4,
       "type": "policy",
       "type_correct": true,
       "fields": {
@@ -634,12 +636,12 @@
       "extracted_verified": 4,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a leave policy effective 1 January 2026, applicable to all full-time employees. It outlines entitlements for casual, earned, and sick leave, along with carry‑forward limits and advance notice requirements."
+      "summary": "This is the Leave Policy 2026, effective from 1 January 2026, applying to all full-time employees. It sets out entitlements for casual leave (12 days per year, non-carry-forward), earned leave (18 days per year, up to 30 days carry-forward), and sick leave (10 days per year, medical certificate required for absences over 2 consecutive days). Leave requests generally require at least 7 days' advance notice, except for sick leave."
     },
     {
       "id": "A19",
       "run": 1,
-      "seconds": 15.5,
+      "seconds": 9.7,
       "type": "policy",
       "type_correct": true,
       "fields": {
@@ -663,12 +665,12 @@
       "extracted_verified": 4,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is an Office IT & Security Policy (Version 3.1) effective 15-07-2026. It outlines four security rules: locking unattended laptops, password requirements, prohibition of personal USB drives, and reporting lost devices within 24 hours."
+      "summary": "This is the Office IT & Security Policy, Version 3.1, effective 15-07-2026. It sets out four security rules covering laptop locking, password requirements, USB drive restrictions, and lost device reporting. The document does not state who the policy applies to."
     },
     {
       "id": "A20",
       "run": 1,
-      "seconds": 7.6,
+      "seconds": 5.3,
       "type": "policy",
       "type_correct": true,
       "fields": {
@@ -685,40 +687,40 @@
         "document_date": true
       },
       "inconsistencies": [],
-      "summary": "The document is a returns policy stating that customers may return unused items within 10 days with the original bill, and refunds are credited to the original payment method within 7 working days."
+      "summary": "The document is a returns policy titled 'RETURNS POLICY'. It states that customers may return unused items within 10 days with the original bill, and that refunds are credited to the original payment method within 7 working days. No effective date is provided."
     },
     {
       "id": "A21",
       "run": 1,
-      "seconds": 13.1,
+      "seconds": 13.0,
       "type": "unknown",
       "type_correct": true,
       "fields": {},
-      "extracted": 2,
-      "extracted_verified": 2,
+      "extracted": 4,
+      "extracted_verified": 4,
       "missing_flagged": {},
       "inconsistencies": [
-        "Document labels itself as both an invoice and a purchase order."
+        "The document is labeled as both INVOICE (L1) and PURCHASE ORDER (L2), which are mutually exclusive document types."
       ],
-      "summary": "The document contains the words 'INVOICE' and 'PURCHASE ORDER' on separate lines and states a total of INR 100. It lacks other essential details such as vendor, buyer, numbers, or dates, making its classification unclear. The contradictory labels indicate an inconsistency."
+      "summary": "The document is a very short fragment that identifies itself as both an INVOICE and a PURCHASE ORDER, making its true type unclear. It states a total of INR 100 but provides no dates, party names, document numbers, or line-item details. Because it mixes two document types and lacks key identifiers, it is classified as unknown."
     },
     {
       "id": "A22",
       "run": 1,
-      "seconds": 5.1,
+      "seconds": 12.5,
       "type": "unknown",
       "type_correct": true,
       "fields": {},
-      "extracted": 0,
-      "extracted_verified": 0,
+      "extracted": 5,
+      "extracted_verified": 5,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a menu listing items and prices for Cafe Aroma, including Masala Chai, Cold Coffee, Veg Sandwich, and opening hours."
+      "summary": "This document is a menu for Cafe Aroma, listing three items with prices in Indian Rupees (Rs). It states the cafe is open daily from 8 AM to 10 PM. It does not appear to be an invoice, purchase order, delivery note, email, or policy."
     },
     {
       "id": "A23",
       "run": 1,
-      "seconds": 10.8,
+      "seconds": 4.8,
       "type": "unknown",
       "type_correct": true,
       "fields": {},
@@ -726,12 +728,12 @@
       "extracted_verified": 0,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document contains nonsensical text with no recognizable structure or content matching any known document type. It does not include any identifiable fields such as vendor, buyer, dates, amounts, or line items."
+      "summary": "Document D1 consists of two lines of nonsensical placeholder text (L1: \"asdf qwer 1234\"; L2: \"lorem ipsum ;;; ###\"). It does not match any recognized business document type such as invoice, purchase order, delivery note, email, or policy, and contains no extractable vendor, buyer, amounts, dates, or line items."
     },
     {
       "id": "A24",
       "run": 1,
-      "seconds": 5.7,
+      "seconds": 6.0,
       "type": "delivery_note",
       "type_correct": true,
       "fields": {
@@ -742,18 +744,18 @@
           "verified": true
         }
       },
-      "extracted": 3,
-      "extracted_verified": 3,
+      "extracted": 4,
+      "extracted_verified": 4,
       "missing_flagged": {
         "purchase_order_number": true
       },
       "inconsistencies": [],
-      "summary": "The document is a delivery challan issued by Om Sai Hardware on 22-01-2026, listing the delivery of 15 boxes of wood screws and 4 hammers. It notes that the goods were received in good condition but does not specify the purchase order number or the party who received the goods."
+      "summary": "This is a delivery challan issued by Om Sai Hardware on 22-01-2026. It records the delivery of 15 boxes of wood screws and 4 hammers, noted as received in good condition. No purchase order number or receiving individual is specified."
     },
     {
       "id": "A01",
       "run": 2,
-      "seconds": 17.3,
+      "seconds": 22.9,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -801,12 +803,12 @@
       "extracted_verified": 9,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a tax invoice issued by Bluewave Traders (vendor) to an unspecified buyer. It references purchase order PO-5521, dated 2026-03-15, with a subtotal of INR 20,000, GST of INR 3,600 (18%), and a grand total of INR 23,600 payable by 2026-04-14."
+      "summary": "This is a tax invoice (BW-1182) issued by Bluewave Traders on 2026-03-15, referencing purchase order PO-5521. It lists a subtotal of INR 20,000, GST of INR 3,600 (18%), and a grand total of INR 23,600, with payment due by 2026-04-14."
     },
     {
       "id": "A02",
       "run": 2,
-      "seconds": 41.3,
+      "seconds": 21.2,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -827,7 +829,7 @@
             "12-05-2026",
             "2026-05-12"
           ],
-          "actual": "Dated: 12-05-2026",
+          "actual": "12-05-2026",
           "correct": true,
           "verified": true
         },
@@ -839,8 +841,8 @@
         },
         "tax_amount": {
           "expected": "7200",
-          "actual": null,
-          "correct": false,
+          "actual": "7200.00",
+          "correct": true,
           "verified": false
         },
         "total_amount": {
@@ -850,16 +852,16 @@
           "verified": true
         }
       },
-      "extracted": 8,
-      "extracted_verified": 7,
+      "extracted": 11,
+      "extracted_verified": 9,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a tax invoice issued by SHREE GANESH ELECTRICALS to MODERN HOME STORES, invoice number GE/2026/0412, dated 12-05-2026. It lists three items (LED bulbs, ceiling fans, extension boards) with a subtotal of ₹40,000, CGST and SGST each of ₹3,600, and a total amount payable of ₹47,200. No purchase order reference or due date is specified."
+      "summary": "This is a tax invoice (GE/2026/0412) issued by SHREE GANESH ELECTRICALS to MODERN HOME STORES on 12-05-2026. It lists three items—LED bulbs, ceiling fans, and extension boards—with a subtotal of 40000.00, CGST and SGST of 3600.00 each, and a total payable of 47200.00."
     },
     {
       "id": "A03",
       "run": 2,
-      "seconds": 16.1,
+      "seconds": 21.7,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -901,12 +903,12 @@
       "extracted_verified": 8,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This document is an invoice from Northwind Consulting LLC to Contoso Retail Inc., dated April 3, 2026, with a due date of May 3, 2026. It lists two services (Data pipeline review and Dashboard fixes) totaling $840.00, with no separate tax or subtotal shown."
+      "summary": "This is an invoice from Northwind Consulting LLC to Contoso Retail Inc., invoice number NW-2026-091, dated April 3, 2026, with payment due May 3, 2026. It charges for two consulting services: a data pipeline review (6 hours at $95.00) and dashboard fixes (3 hours at $90.00), for a total due of $840.00."
     },
     {
       "id": "A04",
       "run": 2,
-      "seconds": 10.6,
+      "seconds": 8.1,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -929,12 +931,12 @@
         "total_amount": true
       },
       "inconsistencies": [],
-      "summary": "The document is an invoice from Northstar Supplies for invoice INV-205 dated 2026-04-12, with payment terms Net 30. Key details such as buyer, total amount, currency, and line items are missing."
+      "summary": "Document D1 is an invoice (INV-205) issued by Northstar Supplies on 2026-04-12 with Net 30 payment terms (D1, L1-L5). The copy explicitly states that the total amount is not shown (D1, L6), and no buyer, currency, line items, subtotal, or tax figures are provided."
     },
     {
       "id": "A05",
       "run": 2,
-      "seconds": 23.4,
+      "seconds": 9.2,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -973,15 +975,15 @@
       "extracted_verified": 7,
       "missing_flagged": {},
       "inconsistencies": [
-        "Total amount (INR 12,800) does not equal subtotal (INR 10,000) plus tax (INR 1,800) which sums to INR 11,800.",
+        "Subtotal INR 10,000 plus tax INR 1,800 equals INR 11,800, but the stated total is INR 12,800, a difference of INR 1,000.",
         "Subtotal ₹10,000.00 + tax ₹1,800.00 = ₹11,800.00, but the stated total is ₹12,800.00."
       ],
-      "summary": "The document is an invoice issued by Cedar Works (vendor) with invoice number CW-77 dated 2026-02-01. It lists a subtotal of INR 10,000, tax of INR 1,800, and a total of INR 12,800. The buyer, purchase order number, line items, and due date are not specified."
+      "summary": "This document is an invoice issued by Cedar Works with invoice number CW-77 dated 2026-02-01. It shows a subtotal of INR 10,000, tax of INR 1,800, and a total of INR 12,800. However, the subtotal and tax sum to INR 11,800, not the stated total of INR 12,800."
     },
     {
       "id": "A06",
       "run": 2,
-      "seconds": 12.6,
+      "seconds": 11.2,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -1002,12 +1004,12 @@
       "extracted_verified": 7,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a letter from Lakeview Facility Services acting as an invoice (no. 4471) for an annual maintenance contract delivered in March 2026. It states the amount payable is Rs. 18,500 inclusive of GST, due within 15 days, and is addressed to the Accounts Team of the buyer."
+      "summary": "This document is an invoice (no. 4471) issued by Lakeview Facility Services to the Accounts Team for an annual maintenance contract delivered in March 2026. The total amount payable is Rs. 18,500 inclusive of GST, due within 15 days. The sender is Priya Nair from Accounts at Lakeview Facility Services."
     },
     {
       "id": "A07",
       "run": 2,
-      "seconds": 18.3,
+      "seconds": 17.5,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -1034,15 +1036,14 @@
       "extracted_verified": 5,
       "missing_flagged": {},
       "inconsistencies": [
-        "Date contains letter 'O' instead of digit '0', making date invalid.",
-        "Label 'Grand Tota1' uses numeric '1' instead of letter 'l'."
+        "The document date \"2O26-01-19\" appears to contain the letter \"O\" instead of the digit \"0\", and field labels use substituted characters (\"Vend0r\", \"lnvoice\", \"Tota1\"), which may be OCR artifacts and make the date not a valid calendar date as printed."
       ],
-      "summary": "The document is a tax invoice issued by Om Sai Hardware (vendor) with invoice number OSH-3309 dated 2O26-01-19. It states a grand total of INR 9,450. Key details such as the buyer, subtotal, tax amount, and line items are not provided."
+      "summary": "This is a tax invoice issued by Om Sai Hardware, invoice number OSH-3309, dated 2O26-01-19. It states a grand total of INR 9,450. The buyer, due date, line items, and tax/subtotal breakdown are not provided."
     },
     {
       "id": "A08",
       "run": 2,
-      "seconds": 9.5,
+      "seconds": 15.9,
       "type": "invoice",
       "type_correct": true,
       "fields": {
@@ -1072,12 +1073,12 @@
       "extracted_verified": 5,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a tax invoice issued by शर्मा ट्रेडर्स (Sharma Traders) bearing invoice number ST-889 dated 05-03-2026. It specifies a total amount payable of ₹ 15,340. No buyer, due date, purchase order reference, subtotal, tax amount, or line items are provided."
+      "summary": "This is a tax invoice (कर बीजक) issued by शर्मा ट्रेडर्स (Sharma Traders), invoice number ST-889, dated 05-03-2026, with a total amount of ₹15,340. It does not state a buyer, line items, subtotal, tax breakdown, or due date."
     },
     {
       "id": "A09",
       "run": 2,
-      "seconds": 19.0,
+      "seconds": 4.9,
       "type": "purchase_order",
       "type_correct": true,
       "fields": {
@@ -1113,12 +1114,12 @@
       "extracted_verified": 6,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This is a purchase order issued by the buyer to supplier Bluewave Traders for PO number PO-5521 dated 2026-03-01, with an order total of INR 23,600 approved by Finance. The document does not specify the buyer name or the line items being ordered."
+      "summary": "This is a purchase order (PO-5521) issued to supplier Bluewave Traders on 2026-03-01. The order total is INR 23,600 and it was approved by Finance. No buyer name or line items are specified."
     },
     {
       "id": "A10",
       "run": 2,
-      "seconds": 29.9,
+      "seconds": 9.1,
       "type": "purchase_order",
       "type_correct": true,
       "fields": {
@@ -1141,16 +1142,16 @@
           "verified": true
         }
       },
-      "extracted": 7,
-      "extracted_verified": 7,
+      "extracted": 8,
+      "extracted_verified": 8,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a purchase order (PO No: 4500012873) issued by Contoso Retail Inc. to Greenleaf Packaging Pvt Ltd on 07/02/2026. It lists three items with a total amount of INR 21,500.00 and requests delivery by 20/02/2026."
+      "summary": "This is a purchase order (PO No: 4500012873) dated 07/02/2026 from buyer Contoso Retail Inc. to vendor Greenleaf Packaging Pvt Ltd. It lists three packaging items with a total of INR 21,500.00 and requires delivery by 20/02/2026."
     },
     {
       "id": "A11",
       "run": 2,
-      "seconds": 10.8,
+      "seconds": 29.0,
       "type": "purchase_order",
       "type_correct": true,
       "fields": {
@@ -1173,12 +1174,12 @@
         "purchase_order_number": true
       },
       "inconsistencies": [],
-      "summary": "This is a purchase order issued to Delta Office Supplies for office stationery. The order was placed on 2026-05-05 and totals INR 2,150 for 10 whiteboard markers and 5 staplers. Key details such as the buyer, purchase order number, and approving authority are not provided."
+      "summary": "The document is a purchase order issued to supplier Delta Office Supplies on 2026-05-05. It lists 10 whiteboard markers and 5 staplers with an order total of INR 2,150."
     },
     {
       "id": "A12",
       "run": 2,
-      "seconds": 5.1,
+      "seconds": 6.8,
       "type": "delivery_note",
       "type_correct": true,
       "fields": {
@@ -1208,12 +1209,12 @@
       "extracted_verified": 5,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This is a delivery note from Northstar Supplies referencing purchase order PO-778, dated 2026-04-08, confirming delivery of 40 office chairs received by A. Kumar."
+      "summary": "This is a delivery note from Northstar Supplies confirming delivery against purchase order PO-778. It is dated 2026-04-08 and records that 40 office chairs were delivered and received by A. Kumar."
     },
     {
       "id": "A13",
       "run": 2,
-      "seconds": 9.7,
+      "seconds": 20.9,
       "type": "delivery_note",
       "type_correct": true,
       "fields": {
@@ -1234,12 +1235,12 @@
       "extracted_verified": 5,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "This is a delivery note from Greenleaf Packaging Pvt Ltd against PO 4500012873, dated 18/02/2026. It lists three items with ordered and delivered quantities, noting a back‑order for bubble wrap. The goods were received by R. Das (Stores)."
+      "summary": "This is a delivery note / goods receipt issued by Greenleaf Packaging Pvt Ltd against purchase order 4500012873, with a delivery date of 18/02/2026. It lists three items: corrugated boxes (500 ordered, 500 delivered), bubble wrap rolls (20 ordered, 12 delivered, 8 back-ordered), and packing tape (100 ordered, 100 delivered). The goods were received by R. Das (Stores)."
     },
     {
       "id": "A14",
       "run": 2,
-      "seconds": 29.5,
+      "seconds": 11.5,
       "type": "email",
       "type_correct": true,
       "fields": {
@@ -1257,17 +1258,17 @@
         }
       },
       "extracted": 7,
-      "extracted_verified": 7,
+      "extracted_verified": 6,
       "missing_flagged": {},
       "inconsistencies": [
-        "Invoice total (INR 52,400) does not match purchase order approved amount (INR 48,000)."
+        "Invoice INV-204 total (INR 52,400) differs from purchase order PO-778 approved amount (INR 48,000)"
       ],
-      "summary": "The email is from buyer@example.com to accounts@northstar.example dated 2026-04-11, with subject 'Question about invoice INV-204'. The sender notes that the invoice total of INR 52,400 differs from the purchase order PO-778 approved amount of INR 48,000 and asks to confirm the correct total before payment."
+      "summary": "An email from buyer@example.com to accounts@northstar.example dated 2026-04-11 regarding invoice INV-204. The sender reports that the invoice total is INR 52,400 while purchase order PO-778 was approved for INR 48,000, and requests confirmation of the correct total before payment."
     },
     {
       "id": "A15",
       "run": 2,
-      "seconds": 24.4,
+      "seconds": 11.7,
       "type": "email",
       "type_correct": true,
       "fields": {
@@ -1284,16 +1285,16 @@
           "verified": true
         }
       },
-      "extracted": 5,
-      "extracted_verified": 5,
+      "extracted": 6,
+      "extracted_verified": 6,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is an email from Ananya Sen to the HR team requesting 5 days of earned leave from 20 to 24 April 2026 for a family function, noting that her manager Rahul has already approved it via chat. The email was sent on 2026-04-02."
+      "summary": "An email from Ananya Sen to HR requesting 5 days of earned leave from 20 to 24 April 2026 for a family function. The message is dated 2 April 2026 and states that her manager Rahul has already approved the leave over chat."
     },
     {
       "id": "A16",
       "run": 2,
-      "seconds": 9.8,
+      "seconds": 8.7,
       "type": "email",
       "type_correct": true,
       "fields": {
@@ -1310,12 +1311,12 @@
         "subject": true
       },
       "inconsistencies": [],
-      "summary": "The document is an email from Vikram (vikram@vendor.example) to procurement@company.com dated 2026-06-10. The sender requests to move tomorrow's supplier review meeting to 3 PM and asks for confirmation. No subject line or referenced documents are present."
+      "summary": "This is an email from vikram@vendor.example to procurement@company.com dated 2026-06-10. The sender asks to reschedule a supplier review meeting scheduled for the next day to 3 PM and requests confirmation. No purchase order or other documents are referenced."
     },
     {
       "id": "A17",
       "run": 2,
-      "seconds": 39.5,
+      "seconds": 8.2,
       "type": "policy",
       "type_correct": true,
       "fields": {
@@ -1339,12 +1340,12 @@
       "extracted_verified": 4,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is an expense reimbursement policy effective January 1, 2026. It outlines rules for employees: receipts must be submitted within 30 days, manager approval is required for expenses over INR 10,000, and meals are reimbursable up to INR 1,500 per person per day."
+      "summary": "This is an Expense Reimbursement Policy effective 2026-01-01. It requires employees to submit receipts within 30 days, requires manager approval for expenses above INR 10,000, and limits meal reimbursement to INR 1,500 per person per day."
     },
     {
       "id": "A18",
       "run": 2,
-      "seconds": 7.4,
+      "seconds": 10.5,
       "type": "policy",
       "type_correct": true,
       "fields": {
@@ -1369,12 +1370,12 @@
       "extracted_verified": 4,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a leave policy effective 1 January 2026, applicable to all full-time employees. It outlines entitlements for casual, earned, and sick leave, including carry‑forward limits and notice requirements."
+      "summary": "This is the Leave Policy 2026, effective from 1 January 2026, applying to all full-time employees. It sets out entitlements for casual leave (12 days per calendar year, no carry forward), earned leave (18 days per year, up to 30 days carry forward), and sick leave (10 days per year, medical certificate required for more than 2 consecutive days). Leave requests must generally be submitted at least 7 days in advance, except for sick leave."
     },
     {
       "id": "A19",
       "run": 2,
-      "seconds": 9.2,
+      "seconds": 11.0,
       "type": "policy",
       "type_correct": true,
       "fields": {
@@ -1398,12 +1399,12 @@
       "extracted_verified": 4,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is an Office IT & Security Policy, version 3.1, effective 15-07-2026. It outlines rules for laptop security, password requirements, USB drive usage, and reporting lost devices."
+      "summary": "This document is the Office IT & Security Policy, Version 3.1, effective 15-07-2026. It sets out four key security rules: laptops must be locked when unattended, passwords must be at least 12 characters and changed every 90 days, personal USB drives are not allowed on office machines, and lost devices must be reported to it-support@company.com within 24 hours."
     },
     {
       "id": "A20",
       "run": 2,
-      "seconds": 7.7,
+      "seconds": 3.5,
       "type": "policy",
       "type_correct": true,
       "fields": {
@@ -1420,40 +1421,40 @@
         "document_date": true
       },
       "inconsistencies": [],
-      "summary": "The document is a returns policy stating that customers may return unused items within 10 days with the original bill, and that refunds are credited to the original payment method within 7 working days."
+      "summary": "The document is a returns policy titled 'RETURNS POLICY'. It allows customers to return unused items within 10 days with the original bill, and states that refunds are credited to the original payment method within 7 working days."
     },
     {
       "id": "A21",
       "run": 2,
-      "seconds": 11.4,
+      "seconds": 18.5,
       "type": "unknown",
       "type_correct": true,
       "fields": {},
-      "extracted": 2,
-      "extracted_verified": 2,
+      "extracted": 3,
+      "extracted_verified": 3,
       "missing_flagged": {},
       "inconsistencies": [
-        "The document includes both 'INVOICE' and 'PURCHASE ORDER' headings, which are mutually exclusive document type indicators."
+        "The document is labeled as both INVOICE (L1) and PURCHASE ORDER (L2), which are mutually exclusive document types with different purposes."
       ],
-      "summary": "The document contains the headings 'INVOICE' and 'PURCHASE ORDER' on separate lines, followed by a total amount of INR 100. It does not provide other essential details such as vendor, buyer, invoice/purchase order number, or dates. Therefore, it is unclear whether the document is intended to be an invoice or a purchase order."
+      "summary": "The document labels itself as both an INVOICE and a PURCHASE ORDER on separate lines and states a total of INR 100, but provides no vendor, buyer, document number, date, or line items. Because it mixes two document types and lacks identifying details, it cannot be classified as a single document type."
     },
     {
       "id": "A22",
       "run": 2,
-      "seconds": 4.4,
+      "seconds": 13.6,
       "type": "unknown",
       "type_correct": true,
       "fields": {},
-      "extracted": 0,
-      "extracted_verified": 0,
+      "extracted": 6,
+      "extracted_verified": 6,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document is a menu from CAFE AROMA listing food and beverage items with their prices in Indian Rupees (Rs). It also states the opening hours (8 AM to 10 PM daily). No transactional or business document fields are present."
+      "summary": "The document is a menu for Cafe Aroma, listing three items with prices in rupees and stating the cafe's daily opening hours. It is not an invoice, purchase order, delivery note, email, or policy. Key facts include Masala Chai at Rs 40, Cold Coffee at Rs 120, Veg Sandwich at Rs 90, and opening hours of 8 AM to 10 PM daily."
     },
     {
       "id": "A23",
       "run": 2,
-      "seconds": 9.2,
+      "seconds": 5.9,
       "type": "unknown",
       "type_correct": true,
       "fields": {},
@@ -1461,12 +1462,12 @@
       "extracted_verified": 0,
       "missing_flagged": {},
       "inconsistencies": [],
-      "summary": "The document contains only nonsensical text lines with no recognizable structure or content matching any known document type. It does not include any identifiable fields such as vendor, buyer, dates, amounts, or line items."
+      "summary": "Document D1 (A23-run2.txt) contains only two lines of placeholder text: 'asdf qwer 1234' (L1) and 'lorem ipsum ;;; ###' (L2). It does not match any recognized business document type such as invoice, purchase order, delivery note, email, or policy."
     },
     {
       "id": "A24",
       "run": 2,
-      "seconds": 3.7,
+      "seconds": 5.3,
       "type": "delivery_note",
       "type_correct": true,
       "fields": {
@@ -1483,13 +1484,13 @@
         "purchase_order_number": true
       },
       "inconsistencies": [],
-      "summary": "This is a delivery challan from Om Sai Hardware dated 22-01-2026, listing the delivery of 15 boxes of wood screws and 4 hammers. The goods were received in good condition, but the purchase order number and the recipient who received the goods are not specified."
+      "summary": "A delivery challan from Om Sai Hardware dated 22-01-2026. It confirms delivery of 15 boxes of wood screws and 4 hammers in good condition."
     }
   ],
   "comparison": [
     {
       "id": "C01",
-      "seconds": 9.0,
+      "seconds": 8.6,
       "status": "MISMATCH",
       "correct": true,
       "observations": [
@@ -1498,7 +1499,7 @@
     },
     {
       "id": "C02",
-      "seconds": 7.9,
+      "seconds": 23.6,
       "status": "MATCH",
       "correct": true,
       "observations": [
@@ -1507,7 +1508,7 @@
     },
     {
       "id": "C03",
-      "seconds": 15.6,
+      "seconds": 11.2,
       "status": "INSUFFICIENT_DATA",
       "correct": true,
       "observations": [
@@ -1516,7 +1517,7 @@
     },
     {
       "id": "C04",
-      "seconds": 18.0,
+      "seconds": 18.5,
       "status": "MISMATCH",
       "correct": true,
       "observations": [
@@ -1526,7 +1527,7 @@
     },
     {
       "id": "C05",
-      "seconds": 8.9,
+      "seconds": 4.5,
       "status": "MISMATCH",
       "correct": true,
       "observations": [
@@ -1536,7 +1537,7 @@
     },
     {
       "id": "C06",
-      "seconds": 24.4,
+      "seconds": 42.9,
       "status": "MATCH",
       "correct": true,
       "observations": [
@@ -1545,7 +1546,7 @@
     },
     {
       "id": "C07",
-      "seconds": 7.0,
+      "seconds": 4.2,
       "status": "INSUFFICIENT_DATA",
       "correct": true,
       "observations": [
@@ -1556,8 +1557,8 @@
   "qa": [
     {
       "id": "Q01",
-      "seconds": 4.1,
-      "answer": "Total GST is ₹7,200.00",
+      "seconds": 2.8,
+      "answer": "Total GST is ₹7,200.00 (CGST ₹3,600.00 plus SGST ₹3,600.00).",
       "verification": "partially_verified",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1568,8 +1569,8 @@
     },
     {
       "id": "Q02",
-      "seconds": 2.7,
-      "answer": "LED BULB 9W (PACK OF 10), CEILING FAN 48\" WHITE, EXTENSION BOARD 4 SOCKET",
+      "seconds": 1.3,
+      "answer": "The products listed are: LED BULB 9W (PACK OF 10), CEILING FAN 48\" WHITE, and EXTENSION BOARD 4 SOCKET.",
       "verification": "verified",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1580,8 +1581,8 @@
     },
     {
       "id": "Q03",
-      "seconds": 4.8,
-      "answer": "620 units",
+      "seconds": 2.4,
+      "answer": "620 units were ordered in total.",
       "verification": "partially_verified",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1592,8 +1593,8 @@
     },
     {
       "id": "Q04",
-      "seconds": 3.0,
-      "answer": "You get 12 casual leave days per calendar year.",
+      "seconds": 1.5,
+      "answer": "You get 12 casual leave days per calendar year, and they cannot be carried forward.",
       "verification": "verified",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1604,8 +1605,8 @@
     },
     {
       "id": "Q05",
-      "seconds": 2.2,
-      "answer": "No, casual leave cannot be carried forward.",
+      "seconds": 2.9,
+      "answer": "No. Casual leave cannot be carried forward; it is 12 days per calendar year and must be used within that year.",
       "verification": "verified",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1616,8 +1617,8 @@
     },
     {
       "id": "Q06",
-      "seconds": 3.9,
-      "answer": "The leave is from 20 April to 24 April 2026.",
+      "seconds": 3.1,
+      "answer": "The leave is for 20 April to 24 April 2026.",
       "verification": "verified",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1629,7 +1630,7 @@
     {
       "id": "Q07",
       "seconds": 3.8,
-      "answer": "No, the bubble wrap roll was only partially delivered (12 of 20 ordered, with 8 back‑ordered); all other items were delivered in full.",
+      "answer": "No. The delivery note shows that bubble wrap roll 50m was ordered in quantity 20 but only 12 were delivered, with 8 back-ordered; the other two items were fully delivered.",
       "verification": "verified",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1640,8 +1641,8 @@
     },
     {
       "id": "Q08",
-      "seconds": 3.0,
-      "answer": "The amount due is $840.00, payable by May 3, 2026.",
+      "seconds": 3.7,
+      "answer": "$840.00 is due by May 3, 2026.",
       "verification": "verified",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1653,8 +1654,8 @@
     },
     {
       "id": "Q09",
-      "seconds": 5.3,
-      "answer": "Yes, manager approval is required for a 15,000 rupee expense.",
+      "seconds": 1.9,
+      "answer": "Yes. A 15,000 rupee expense requires manager approval because the policy requires approval for expenses above INR 10,000.",
       "verification": "verified",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1665,8 +1666,8 @@
     },
     {
       "id": "Q10",
-      "seconds": 4.1,
-      "answer": "I cannot determine this from the documents",
+      "seconds": 1.9,
+      "answer": "I cannot determine this from the documents. The invoice lists the vendor as Bluewave Traders but does not include any bank account number.",
       "verification": "not_in_documents",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1677,8 +1678,8 @@
     },
     {
       "id": "Q11",
-      "seconds": 5.8,
-      "answer": "I cannot determine this from the documents",
+      "seconds": 1.8,
+      "answer": "I cannot determine this from the documents.",
       "verification": "not_in_documents",
       "answer_source": "nvidia",
       "has_valid_citation": true,
@@ -1689,19 +1690,19 @@
     },
     {
       "id": "Q12",
-      "seconds": 11.6,
-      "answer": "INR 48,000",
+      "seconds": 19.8,
+      "answer": "Invoice:\n₹52,400.00\n\nPurchase Order:\n₹48,000.00\n\nStatus:\nMISMATCH\n\nObservations:\n- The invoice total (₹52,400.00) is ₹4,400.00 higher than the purchase order total (₹48,000.00), a 9.2% difference.\n- A14.txt (email) also refers to PO-778.",
       "verification": "verified",
-      "answer_source": "nvidia",
+      "answer_source": "verified_comparison",
       "has_valid_citation": true,
       "checks": {
-        "numbers": false
+        "numbers": true
       },
-      "correct": false
+      "correct": true
     },
     {
       "id": "Q13",
-      "seconds": 10.8,
+      "seconds": 5.6,
       "answer": "Invoice:\n₹23,600.00\n\nPurchase Order:\n₹23,600.00\n\nStatus:\nMATCH\n\nObservations:\n- The invoice total equals the purchase order total.",
       "verification": "verified",
       "answer_source": "verified_comparison",
@@ -1714,7 +1715,7 @@
     },
     {
       "id": "Q14",
-      "seconds": 3.9,
+      "seconds": 5.5,
       "answer": "The invoice total is INR 5,000.",
       "verification": "verified",
       "answer_source": "nvidia",

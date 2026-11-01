@@ -258,7 +258,8 @@ def write_report(metrics: dict, analysis_runs: list[dict], comparisons: list[dic
     lines += [f"| {label} | {fmt(metrics[key])} | {meaning} |" for key, label, meaning in METRIC_LABELS]
     previous_path = ROOT / "evaluation" / "results_run1.json"
     if previous_path.exists():
-        previous = json.loads(previous_path.read_text())["metrics"]
+        previous_run = json.loads(previous_path.read_text())
+        previous = previous_run["metrics"]
         lines += [
             "",
             "### Before and after the evaluation-driven fixes",
@@ -271,7 +272,7 @@ def write_report(metrics: dict, analysis_runs: list[dict], comparisons: list[dic
             "A07/A08 failed on run 1 because of an occasional near-empty model reply; such replies are now retried,",
             "but if none occurred in this run, part of that gain is run-to-run variation rather than the fix.",
             "",
-            "| Metric | Run 1 | This run |",
+            f"| Metric | Run 1 (`{previous_run.get('model', '?').split('/')[-1]}`) | This run (`{llm_client.NVIDIA_MODEL.split('/')[-1]}`) |",
             "|---|---|---|",
         ]
         lines += [f"| {label} | {fmt(previous.get(key))} | {fmt(metrics[key])} |" for key, label, _ in METRIC_LABELS]

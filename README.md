@@ -25,7 +25,7 @@ The headline challenge: given deliberately conflicting documents (an invoice for
 ## Solution overview
 
 ```
-documents ──► numbered lines (L1, L2, …) ──► Nemotron 3 Super (reasoning LLM, JSON mode)
+documents ──► numbered lines (L1, L2, …) ──► Nemotron 3.5 Super (reasoning LLM, JSON mode)
                                                    │  type, fields, summary, answers,
                                                    │  each citing line numbers
                                                    ▼
@@ -38,7 +38,7 @@ documents ──► numbered lines (L1, L2, …) ──► Nemotron 3 Super (rea
       unverified / not in documents)
 ```
 
-* **LLM** (`nvidia/nemotron-3-super-120b-a12b`): classification, extraction, summaries, understanding the question, reasoning (sums across rows, applying policy rules), and choosing when a question needs the invoice-vs-PO comparison.
+* **LLM** (`nvidia/nemotron-3.5-super-vl-120b-a12b`): classification, extraction, summaries, understanding the question, reasoning (sums across rows, applying policy rules), and choosing when a question needs the invoice-vs-PO comparison.
 * **Code**: PDF extraction that keeps table rows intact, line-numbered context, citation and value verification, arithmetic checks, the MATCH / MISMATCH / INSUFFICIENT_DATA decision, and required fields per document type.
 * **UI** (React): upload several documents, analyze them, run the invoice vs purchase order check, and chat with all documents in context. Every answer shows its evidence and a verification label.
 
@@ -90,7 +90,7 @@ python evaluation/run_eval.py
 | Setting (`.env`) | Default | Purpose |
 |---|---|---|
 | `NVIDIA_API_KEY` | (required) | NVIDIA API key |
-| `NVIDIA_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | Any chat model on the NVIDIA API that supports JSON mode |
+| `NVIDIA_MODEL` | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Any chat model on the NVIDIA API that supports JSON mode |
 | `PORT` | `5001` | Backend port (the frontend proxies `/api` to it) |
 
 ## Author
@@ -112,7 +112,7 @@ Not deployed. Run locally as above.
 | [`docs/design.md`](docs/design.md) | **Solution design**: decomposition, architecture diagram, where the LLM is used vs code, trade-offs |
 | [`docs/prompts.md`](docs/prompts.md) | **Prompt engineering**: V1 → problem → V2 → … → final prompts, and why |
 | [`docs/evaluation.md`](docs/evaluation.md) | **Evaluation results** on the 45-case test set |
-| [`docs/failure_cases.md`](docs/failure_cases.md) | **Failure cases and improvements** (18 cases, 6 found by the evaluation) |
+| [`docs/failure_cases.md`](docs/failure_cases.md) | **Failure cases and improvements** (19 cases, 6 found by the evaluation) |
 | [`docs/ai_usage.md`](docs/ai_usage.md) | **AI usage** during development |
 | [`pipeline.py`](pipeline.py) | Analysis, Q&A and comparison; all prompts |
 | [`grounding.py`](grounding.py) | Numbered-line context, citation and value verification, answer labels |

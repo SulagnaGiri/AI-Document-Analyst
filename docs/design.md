@@ -29,7 +29,7 @@ flowchart LR
       QA[answer] --> CTX
       CMP[compare] --> AN
       CTX[grounding.format_context<br/>numbered lines L1..Ln<br/>per document D1..Dn] --> LLM
-      LLM[llm_client.call_llm<br/>Nemotron 3 Super, JSON mode] --> VER
+      LLM[llm_client.call_llm<br/>Nemotron 3.5 Super, JSON mode] --> VER
       VER[grounding: resolve cited lines,<br/>check values are on them,<br/>label answer]
     end
 
@@ -84,7 +84,7 @@ Results are cached per document text, so analyzing then comparing does not call 
 * **Reasoning.** Adding CGST and SGST, summing quantities across table rows, applying a policy rule to a case ("Do I need approval for ₹15,000?"), noticing that documents disagree.
 * **Summaries and follow-up questions.**
 
-**Model choice: `nvidia/nemotron-3-super-120b-a12b`.** It is a reasoning model (it thinks before answering; the thinking is returned separately and not shown), supports JSON mode, and answers in about 5–15 seconds. We tested what our API key could access: `meta/llama-3.3-70b-instruct`, the original model, had been retired (HTTP 410); `nemotron-nano-3-30b` was not available to our account; `nemotron-3-ultra-550b` is available but slower, and was not needed once the design was fixed.
+**Model choice: `nvidia/nemotron-3.5-super-vl-120b-a12b`.** It is a reasoning model (it thinks before answering; the thinking is returned separately and not shown), supports JSON mode, and answers in about 5–15 seconds. We tested what our API key could access: `meta/llama-3.3-70b-instruct`, the original model, had been retired (HTTP 410); `nemotron-nano-3-30b` was not available to our account; `nemotron-3-ultra-550b` is available but slower, and was not needed once the design was fixed. Later, `nemotron-3-super-120b-a12b` was also withdrawn for our key (HTTP 404), and we moved to its successor `nvidia/nemotron-3.5-super-vl-120b-a12b` by changing one setting (see failure case 19).
 
 ## 4. Where we use code instead, and why
 

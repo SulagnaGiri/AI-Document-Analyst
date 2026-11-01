@@ -14,9 +14,9 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY")
-# Nemotron 3 Super is a reasoning model: it thinks before answering (returned separately
+# Nemotron 3.5 Super is a reasoning model: it thinks before answering (returned separately
 # as reasoning_content), which is what lets it read tables and do arithmetic.
-NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3-super-120b-a12b")
+NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3.5-super-vl-120b-a12b")
 NVIDIA_API_URL = os.environ.get("NVIDIA_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
 
 log = logging.getLogger(__name__)

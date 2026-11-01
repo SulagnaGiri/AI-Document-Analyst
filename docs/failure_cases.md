@@ -22,6 +22,7 @@ Every case below was observed while building and testing this system. Each has a
 | 16 | Conflicting documents were answered with "cannot determine" (found by evaluation) | ✅ |
 | 17 | An email that *reports* a discrepancy is flagged as inconsistent | ⚠️ judgement call |
 | 18 | Asked "what is the correct amount?" over conflicting documents, the model sometimes picks one | ⚠️ open |
+| 19 | The replacement model was withdrawn too | ✅ |
 
 ---
 
@@ -137,3 +138,9 @@ The next cases were found by the first full run of [the evaluation](evaluation.m
 * **What went wrong:** In the final evaluation run, Q12 (invoice ₹52,400, PO ₹48,000, and the customer's email disputing it) was answered "INR 48,000" and labelled verified, because ₹48,000 is printed in the documents. In the previous run the same question correctly triggered the comparison and showed both amounts with MISMATCH.
 * **Why:** The question asks for one "correct" amount. Despite the prompt rule *"do not pick a side without evidence"*, the model sometimes treats the approved PO amount as authoritative. Our verification confirms the figure exists, not that choosing it was justified (see case 11).
 * **Next step:** For questions whose answer depends on an amount that the comparison marks as MISMATCH, append the verified comparison to the answer, so the conflict is always shown whatever the model chose. This is the clearest remaining example of why the comparison verdict is computed by code.
+
+### 19. The replacement model was withdrawn too
+
+* **What went wrong:** A few weeks after switching to `nvidia/nemotron-3-super-120b-a12b`, it started returning HTTP 404 ("Function … Not found for account") for our key.
+* **Why:** Hosted models are retired or moved without notice. This is the same risk as case 1.
+* **What we changed:** Because of the fix for case 1, the app now fails with a clear error naming the model instead of silently degrading. Switching was a one-line change of the default `NVIDIA_MODEL` to its successor, `nvidia/nemotron-3.5-super-vl-120b-a12b` (also a reasoning model with JSON mode, about 2 s for a short request). The model can be overridden in `.env` without touching code. The evaluation was re-run on the new model; see [evaluation.md](evaluation.md).
