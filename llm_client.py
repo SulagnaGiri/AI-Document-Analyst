@@ -24,10 +24,12 @@ NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3.5-super-vl-120b
 # Used when the main model stalls or is unavailable. Set to "" to disable.
 NVIDIA_FALLBACK_MODEL = os.environ.get("NVIDIA_FALLBACK_MODEL", "nvidia/nemotron-3-ultra-550b-a55b")
 NVIDIA_API_URL = os.environ.get("NVIDIA_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
+NVIDIA_TIMEOUT = int(os.environ.get("NVIDIA_TIMEOUT", os.environ.get("LLM_TIMEOUT", "180")))
 
 # --- Gemini configuration ---
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_API_URL = os.environ.get("GEMINI_API_URL", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")
+LLM_TIMEOUT = NVIDIA_TIMEOUT
 
 log = logging.getLogger(__name__)
 
