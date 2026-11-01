@@ -23,6 +23,7 @@ Every case below was observed while building and testing this system. Each has a
 | 17 | An email that *reports* a discrepancy is flagged as inconsistent | ⚠️ judgement call |
 | 18 | Asked "what is the correct amount?" over conflicting documents, the model sometimes picks one | ⚠️ open |
 | 19 | The replacement model was withdrawn too | ✅ |
+| 20 | A scanned PDF produced a confusing "Document text is required" error | ✅ (clear error); OCR open |
 
 ---
 
@@ -144,3 +145,10 @@ The next cases were found by the first full run of [the evaluation](evaluation.m
 * **What went wrong:** A few weeks after switching to `nvidia/nemotron-3-super-120b-a12b`, it started returning HTTP 404 ("Function … Not found for account") for our key.
 * **Why:** Hosted models are retired or moved without notice. This is the same risk as case 1.
 * **What we changed:** Because of the fix for case 1, the app now fails with a clear error naming the model instead of silently degrading. Switching was a one-line change of the default `NVIDIA_MODEL` to its successor, `nvidia/nemotron-3.5-super-vl-120b-a12b` (also a reasoning model with JSON mode, about 2 s for a short request). The model can be overridden in `.env` without touching code. The evaluation was re-run on the new model; see [evaluation.md](evaluation.md).
+
+### 20. A scanned PDF produced a confusing "Document text is required" error
+
+* **What went wrong:** After deploying, uploading `cheatsheet.pdf` (17 pages, 2.9 MB) showed *"cheatsheet.pdf: Document text is required."*
+* **Why:** Every page is an image (a scan or exported slides) with no text layer, so pypdf extracted 0 characters. The upload accepted the empty text, and the failure surfaced one step later as a generic validation error.
+* **What we changed:** The upload endpoint now rejects PDFs with no extractable text, with an explanation and a suggestion (HTTP 422, `test_image_only_pdf_is_rejected_with_a_clear_message`).
+* **Still open:** Real support for scanned documents needs OCR. Because the model in use (`nemotron-3.5-super-vl`) is a vision-language model, a next step would be to render each page to an image and have the model transcribe it before the normal pipeline runs. The trade-off is one extra model call per page, which matters within Vercel's 300-second limit.

@@ -285,6 +285,12 @@ class LlmClientTests(unittest.TestCase):
 
 
 class PdfTests(unittest.TestCase):
+    def test_image_only_pdf_is_rejected_with_a_clear_message(self):
+        with patch("app.pdf_to_text", return_value="  \n "):
+            response = app.app.test_client().post("/api/upload", data={"file": (io.BytesIO(b"%PDF"), "scan.pdf")})
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("no selectable text", response.get_json()["error"])
+
     def test_column_gaps_become_separators(self):
         class Page:
             def extract_text(self, extraction_mode=None):

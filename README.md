@@ -122,7 +122,7 @@ Notes: requests may run up to 300 s (`maxDuration` in `vercel.json`, the Hobby-p
 | [`docs/design.md`](docs/design.md) | **Solution design**: decomposition, architecture diagram, where the LLM is used vs code, trade-offs |
 | [`docs/prompts.md`](docs/prompts.md) | **Prompt engineering**: V1 → problem → V2 → … → final prompts, and why |
 | [`docs/evaluation.md`](docs/evaluation.md) | **Evaluation results** on the 45-case test set |
-| [`docs/failure_cases.md`](docs/failure_cases.md) | **Failure cases and improvements** (19 cases, 6 found by the evaluation) |
+| [`docs/failure_cases.md`](docs/failure_cases.md) | **Failure cases and improvements** (20 cases, 6 found by the evaluation) |
 | [`docs/ai_usage.md`](docs/ai_usage.md) | **AI usage** during development |
 | [`pipeline.py`](pipeline.py) | Analysis, Q&A and comparison; all prompts |
 | [`grounding.py`](grounding.py) | Numbered-line context, citation and value verification, answer labels |
