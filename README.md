@@ -1497,7 +1497,7 @@ The project maintains a separate failure-case document:
 docs/failure_cases.md
 ```
 
-It documents 20 failure cases, including 6 cases identified through evaluation.
+It documents 21 failure cases, including 6 cases identified through evaluation.
 
 ## 17.5 Evaluation Documentation
 
@@ -1523,6 +1523,8 @@ The application uses environment variables to manage API credentials and runtime
 |---|---|---|
 | `NVIDIA_API_KEY` | Required | NVIDIA NIM API authentication. |
 | `NVIDIA_MODEL` | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Selects the NVIDIA API chat model supporting JSON mode. |
+| `NVIDIA_FALLBACK_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | Used when the main model stalls or is unavailable; empty disables it. |
+| `NVIDIA_TIMEOUT` | `50` | Seconds to wait for one model reply before trying the next model. |
 | `PORT` | `5001` | Configures the backend server port. |
 
 ### Example `.env`
@@ -1768,7 +1770,7 @@ The following files contain the main implementation, architecture, prompts, eval
 | `docs/design.md` | **Solution design:** Architecture decomposition, system design, LLM responsibilities, deterministic verification, and technical trade-offs. |
 | `docs/prompts.md` | **Prompt engineering:** Prompt evolution from V1 through the final version, including identified problems and improvements. |
 | `docs/evaluation.md` | **Evaluation results:** Performance results from the 45-case benchmark. |
-| `docs/failure_cases.md` | **Failure analysis:** Documentation of 20 failure cases, including 6 discovered during evaluation. |
+| `docs/failure_cases.md` | **Failure analysis:** Documentation of 21 failure cases, including 6 discovered during evaluation. |
 | `docs/ai_usage.md` | **AI usage:** Documentation of AI-assisted development. |
 | `pipeline.py` | Core analysis, Q&A, comparison workflows, and prompts. |
 | `grounding.py` | Numbered-line context, citation resolution, value verification, and answer confidence labels. |

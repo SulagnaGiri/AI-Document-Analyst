@@ -70,7 +70,11 @@ def frontend(path: str = "index.html"):
 
 @app.route("/api/health")
 def health():
-    return jsonify({"llm_configured": llm_client.configured(), "model": llm_client.NVIDIA_MODEL})
+    return jsonify({
+        "llm_configured": llm_client.configured(),
+        "model": llm_client.NVIDIA_MODEL,
+        "fallback_model": llm_client.NVIDIA_FALLBACK_MODEL or None,
+    })
 
 
 @app.route("/api/upload", methods=["POST"])

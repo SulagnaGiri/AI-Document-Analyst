@@ -107,6 +107,7 @@ Results are cached per document text, so analyzing then comparing does not call 
 7. **JSON mode plus one retry.** Product names such as `48"` used to break the model's JSON roughly one time in three. Replies that parse but lack required keys (an occasional bare `{"document_type": "unknown"}`) are retried the same way.
 8. **Caching analyses** by document text so "Analyze all" followed by "Run check" or a comparison question reuses results.
 9. **Documents are data, not instructions.** The system prompt tells the model to ignore and report instructions embedded in documents. Evaluation case Q14 checks this with an "ignore previous instructions" line. *Trade-off:* this is a prompt-level defence, not a guarantee; the code-side checks (citations, verified values, code-decided comparison) limit what a successful injection could change.
+10. **Time limit, retry and a fallback model.** NVIDIA's free endpoints are shared: in testing, a 29-token reply sometimes waited 68 s in a queue, and two models were withdrawn. Each call waits at most 50 s (`NVIDIA_TIMEOUT`), then tries `nemotron-3-ultra-550b-a55b`, then the main model again; HTTP 404/410 skips straight to the fallback, and 401/403 stops (a bad key will not work on any model). Each answer records which model produced it. *Trade-off:* the fallback was checked on a small set of real prompts, not the full evaluation, and a slow reply over 50 s is abandoned even if it would have succeeded.
 
 ## 6. Known limitations
 

@@ -24,6 +24,7 @@ Every case below was observed while building and testing this system. Each has a
 | 18 | Asked "what is the correct amount?" over conflicting documents, the model sometimes picks one | ⚠️ open |
 | 19 | The replacement model was withdrawn too | ✅ |
 | 20 | A scanned PDF produced a confusing "Document text is required" error | ✅ (clear error); OCR open |
+| 21 | The deployed app stalled for minutes, then failed, while NVIDIA's queue was busy | ✅ |
 
 ---
 
@@ -152,3 +153,10 @@ The next cases were found by the first full run of [the evaluation](evaluation.m
 * **Why:** Every page is an image (a scan or exported slides) with no text layer, so pypdf extracted 0 characters. The upload accepted the empty text, and the failure surfaced one step later as a generic validation error.
 * **What we changed:** The upload endpoint now rejects PDFs with no extractable text, with an explanation and a suggestion (HTTP 422, `test_image_only_pdf_is_rejected_with_a_clear_message`).
 * **Still open:** Real support for scanned documents needs OCR. Because the model in use (`nemotron-3.5-super-vl`) is a vision-language model, a next step would be to render each page to an image and have the model transcribe it before the normal pipeline runs. The trade-off is one extra model call per page, which matters within Vercel's 300-second limit.
+
+### 21. The deployed app stalled for minutes, then failed, while NVIDIA's queue was busy
+
+* **What went wrong:** On the live site, analyzing a simple PDF took 2–3 minutes and then failed with *"The language model could not be reached or returned an unusable reply."* Locally, the same documents had taken about 10 s.
+* **Why:** Not our code and not the API key. Timing the same tiny request against NVIDIA three times gave 3.3 s, 1.2 s and **67.8 s** for 29 tokens, i.e. the request was waiting in the shared free endpoint's queue. The client waited up to 180 s per request with no fallback, so one stuck request could sink the whole analysis.
+* **What we changed:** `llm_client.call_llm` now waits at most 50 s per attempt, then tries a fallback model (`nemotron-3-ultra-550b-a55b`), then the main model again. A withdrawn model (404/410) goes straight to the fallback, which also covers cases 1 and 19. Each answer reports which model produced it. The fallback was chosen by timing candidates on real prompts while the main model was stalling: Ultra answered all three checks correctly in 7–41 s; `nemotron-3.5-lightning` was slow and misrouted a question; `nemotron-3-nano-omni` missed the comparison intent.
+* **Observed after the fix:** In a live run, the main model timed out and the fallback answered "What is the customer asking about?" correctly. (Tests: `test_one_stall_is_answered_by_the_fallback`, `test_stalled_main_model_falls_back_then_retries_main`, `test_withdrawn_model_goes_straight_to_fallback`, `test_bad_key_does_not_try_other_models`.)

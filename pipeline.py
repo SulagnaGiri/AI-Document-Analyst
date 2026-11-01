@@ -202,7 +202,7 @@ def analyze(name: str, text: str) -> dict:
         "fields": fields,
         "inconsistencies": inconsistencies,
         "missing_questions": missing[:8],
-        "model": llm_client.NVIDIA_MODEL,
+        "model": result.get("_model", llm_client.NVIDIA_MODEL),
     }
     if len(_analysis_cache) > 128:
         _analysis_cache.clear()
@@ -252,7 +252,7 @@ def answer(question: str, documents: list[dict[str, str]]) -> dict:
         "answer": result["answer"].strip(),
         "citations": citations,
         "answer_source": "nvidia",
-        "model": llm_client.NVIDIA_MODEL,
+        "model": result.get("_model", llm_client.NVIDIA_MODEL),
         **grade_answer(result["answer"], citations, documents, question),
     }
     if isinstance(result.get("explanation"), str) and result["explanation"].strip():
