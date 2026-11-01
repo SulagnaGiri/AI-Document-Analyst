@@ -1517,20 +1517,36 @@ evaluation/run_eval.py
 
 # 18. Environment Configuration
 
-The application uses environment variables to manage API credentials and runtime configuration.
+The application uses environment variables to manage API credentials, multi-key pools, and runtime configuration.
 
 | Setting | Default | Purpose |
 |---|---|---|
-| `NVIDIA_API_KEY` | Required | NVIDIA NIM API authentication. |
+| `GEMINI_API_KEYS` | Optional (Primary) | Comma-separated pool of Gemini API keys for automatic round-robin and rate-limit failover (e.g. 10 keys). |
+| `GEMINI_API_KEY` | Optional | Single Google Gemini API key (or multiple repeated lines). |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Selects Google Gemini model (`gemini-2.5-flash`, `gemini-1.5-flash`, etc.). |
+| `LLM_PROVIDER` | `gemini` (auto) | Provider selection: `gemini` or `nvidia`. Auto-detects based on available keys. |
+| `NVIDIA_API_KEY` | Optional (Alternative) | NVIDIA NIM API authentication. |
 | `NVIDIA_MODEL` | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Selects the NVIDIA API chat model supporting JSON mode. |
 | `PORT` | `5001` | Configures the backend server port. |
+
+### Multi-Key Gemini Configuration
+
+When multiple Gemini keys are provided (e.g. 10 keys), the client maintains a thread-safe round-robin pool. If any key encounters an HTTP 429 (Rate Limit) or quota exhaustion, it automatically fails over to the next key in the pool without interrupting the user request.
 
 ### Example `.env`
 
 ```env
-NVIDIA_API_KEY=your_nvidia_api_key
+# Multi-key Gemini configuration (recommended for high throughput / free-tier quotas)
+GEMINI_API_KEYS=AIzaSy...,AIzaSy...,AIzaSy...
+GEMINI_MODEL=gemini-2.5-flash
 
-NVIDIA_MODEL=nvidia/nemotron-3.5-super-vl-120b-a12b
+# Or provide them individually:
+# GEMINI_API_KEY_1=AIzaSy...
+# GEMINI_API_KEY_2=AIzaSy...
+
+# Alternative: NVIDIA NIM
+# NVIDIA_API_KEY=your_nvidia_api_key
+# NVIDIA_MODEL=nvidia/nemotron-3.5-super-vl-120b-a12b
 
 PORT=5001
 ```

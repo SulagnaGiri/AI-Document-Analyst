@@ -70,7 +70,14 @@ def frontend(path: str = "index.html"):
 
 @app.route("/api/health")
 def health():
-    return jsonify({"llm_configured": llm_client.configured(), "model": llm_client.NVIDIA_MODEL})
+    provider = llm_client.get_provider()
+    keys_count = len(llm_client.get_gemini_keys()) if provider == "gemini" else (1 if llm_client.NVIDIA_API_KEY else 0)
+    return jsonify({
+        "llm_configured": llm_client.configured(),
+        "provider": provider,
+        "model": llm_client.get_model(),
+        "keys_configured": keys_count,
+    })
 
 
 @app.route("/api/upload", methods=["POST"])

@@ -29,7 +29,7 @@ class LLMUnavailable(RuntimeError):
     """The model could not be reached or never returned usable JSON."""
 
     MESSAGES = {
-        "not_configured": "NVIDIA_API_KEY is not set, so documents cannot be analyzed.",
+        "not_configured": "LLM API key is not configured. Please set GEMINI_API_KEYS (or GEMINI_API_KEY / NVIDIA_API_KEY) in .env.",
         "request_failed": "The language model could not be reached or returned an unusable reply. Check the backend log and try again.",
     }
 
@@ -154,7 +154,7 @@ def _verify_fields(raw_fields: Any, document: dict[str, str]) -> dict[str, dict]
             "evidence": evidence,
             "lines": citations[0]["lines"] if citations else [],
             "verified": verified,
-            "source": "nvidia",
+            "source": llm_client.get_provider(),
         }
     return fields
 
@@ -163,7 +163,8 @@ def analyze(name: str, text: str) -> dict:
     """Classify, extract, summarize, flag inconsistencies and missing info for one document."""
     if not llm_client.configured():
         raise LLMUnavailable("not_configured")
-    key = hashlib.sha1(f"{llm_client.NVIDIA_MODEL}\0{name}\0{text}".encode()).hexdigest()
+    model_name = llm_client.get_model()
+    key = hashlib.sha1(f"{model_name}\0{name}\0{text}".encode()).hexdigest()
     if key in _analysis_cache:
         return _analysis_cache[key]
 
@@ -185,7 +186,7 @@ def analyze(name: str, text: str) -> dict:
             inconsistencies.append({
                 "issue": str(item["issue"]).strip(),
                 "evidence": [citation["quote"] for citation in citations],
-                "source": "nvidia",
+                "source": llm_client.get_provider(),
             })
     inconsistencies += check_internal_consistency(verified_fields)
 
@@ -202,7 +203,7 @@ def analyze(name: str, text: str) -> dict:
         "fields": fields,
         "inconsistencies": inconsistencies,
         "missing_questions": missing[:8],
-        "model": llm_client.NVIDIA_MODEL,
+        "model": model_name,
     }
     if len(_analysis_cache) > 128:
         _analysis_cache.clear()
@@ -251,8 +252,8 @@ def answer(question: str, documents: list[dict[str, str]]) -> dict:
     response = {
         "answer": result["answer"].strip(),
         "citations": citations,
-        "answer_source": "nvidia",
-        "model": llm_client.NVIDIA_MODEL,
+        "answer_source": llm_client.get_provider(),
+        "model": llm_client.get_model(),
         **grade_answer(result["answer"], citations, documents, question),
     }
     if isinstance(result.get("explanation"), str) and result["explanation"].strip():
