@@ -103,12 +103,11 @@ Sulagna Giri (individual submission)
 
 ### Deploying to Vercel
 
-`vercel.json` deploys the whole app as one Vercel project: `app.py` runs as a Python (Flask) function for `/api/*`, and the React build in `public/` is served from Vercel's CDN.
+The app deploys as one Vercel project: `app.py` (Flask) runs as a Python function and serves both the API (`/api/*`) and the built React app from `public/`. The built frontend is committed, so Vercel does not need a Node build step.
 
-1. Push the repository to GitHub.
-2. On [vercel.com/new](https://vercel.com/new), import the repository. Leave the framework and root directory as detected.
-3. Under **Environment Variables**, add `NVIDIA_API_KEY` (and optionally `NVIDIA_MODEL`).
-4. Click **Deploy**.
+1. If you changed the frontend, rebuild it first: `cd frontend && npm run build` (writes `public/`), then commit.
+2. Push to GitHub. On [vercel.com/new](https://vercel.com/new), import the repository as a Python/Flask project; it auto-redeploys on every push afterwards.
+3. Under **Settings → Environment Variables**, add `NVIDIA_API_KEY` (and optionally `NVIDIA_MODEL`), then redeploy.
 
 Notes: requests may run up to 300 s (`maxDuration` in `vercel.json`, the Hobby-plan maximum); the first request after idle can take 1–2 minutes while the model warms up. Uploads are limited to 4.5 MB by Vercel.
 

@@ -6,7 +6,7 @@ import io
 import os
 import re
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from pypdf import PdfReader
 
@@ -49,14 +49,23 @@ def _documents_from(payload: dict) -> list[dict[str, str]]:
     ]
 
 
+PUBLIC_DIR = os.path.join(os.path.dirname(__file__), "public")
+
+
 @app.route("/")
-def index():
-    # On Vercel the built frontend (public/index.html) is normally served by the CDN; this is the fallback.
-    built = os.path.join(os.path.dirname(__file__), "public", "index.html")
-    if os.path.exists(built):
-        with open(built, encoding="utf-8") as handle:
-            return handle.read()
-    return "<html><body><h2>Document Analyst API</h2><p>Open the frontend on port 3010.</p></body></html>"
+@app.route("/<path:path>")
+def frontend(path: str = "index.html"):
+    """Serve the built React app (public/, produced by `npm run build` in frontend/).
+
+    Flask serves it itself so the deployment does not depend on a separate frontend build step.
+    """
+    if path.startswith("api/"):
+        return jsonify({"error": "Not found."}), 404
+    if os.path.isfile(os.path.join(PUBLIC_DIR, path)):
+        return send_from_directory(PUBLIC_DIR, path)
+    if os.path.isfile(os.path.join(PUBLIC_DIR, "index.html")):
+        return send_from_directory(PUBLIC_DIR, "index.html")
+    return "<html><body><h2>Document Analyst API</h2><p>Frontend not built: run `npm run build` in frontend/.</p></body></html>"
 
 
 @app.route("/api/health")
