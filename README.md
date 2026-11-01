@@ -99,7 +99,18 @@ Sulagna Giri (individual submission)
 
 ## Live application
 
-Not deployed. Run locally as above.
+> **TODO:** add the Vercel URL once deployed.
+
+### Deploying to Vercel
+
+`vercel.json` deploys the whole app as one Vercel project: `app.py` runs as a Python (Flask) function for `/api/*`, and the React build in `public/` is served from Vercel's CDN.
+
+1. Push the repository to GitHub.
+2. On [vercel.com/new](https://vercel.com/new), import the repository. Leave the framework and root directory as detected.
+3. Under **Environment Variables**, add `NVIDIA_API_KEY` (and optionally `NVIDIA_MODEL`).
+4. Click **Deploy**.
+
+Notes: requests may run up to 300 s (`maxDuration` in `vercel.json`, the Hobby-plan maximum); the first request after idle can take 1–2 minutes while the model warms up. Uploads are limited to 4.5 MB by Vercel.
 
 ## Demo
 

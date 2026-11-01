@@ -51,6 +51,11 @@ def _documents_from(payload: dict) -> list[dict[str, str]]:
 
 @app.route("/")
 def index():
+    # On Vercel the built frontend (public/index.html) is normally served by the CDN; this is the fallback.
+    built = os.path.join(os.path.dirname(__file__), "public", "index.html")
+    if os.path.exists(built):
+        with open(built, encoding="utf-8") as handle:
+            return handle.read()
     return "<html><body><h2>Document Analyst API</h2><p>Open the frontend on port 3010.</p></body></html>"
 
 
