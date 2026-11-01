@@ -118,7 +118,7 @@ class AnswerTests(unittest.TestCase):
         self.assertEqual(raised.exception.reason, "request_failed")
 
     def test_api_returns_503_when_model_unavailable(self):
-        with patch.object(llm_client, "NVIDIA_API_KEY", None):
+        with patch.object(llm_client, "NVIDIA_API_KEY", None), patch.object(llm_client, "get_gemini_keys", return_value=[]):
             response = app.app.test_client().post("/api/answer", json={
                 "question": "Total?", "documents": [{"name": "inv.txt", "text": INVOICE}],
             })
@@ -327,6 +327,25 @@ class PdfTests(unittest.TestCase):
         with patch("app.PdfReader", return_value=type("R", (), {"pages": [Page()]})()):
             text = app.pdf_to_text(b"%PDF")
         self.assertEqual(text, '1 | SEC 48"FAN | 84145120 | 72.0 Pc.\nSubtotal | 408161.08')
+
+
+class GeminiClientTests(unittest.TestCase):
+    @staticmethod
+    def reply(content):
+        return io.BytesIO(json.dumps({"choices": [{"message": {"content": content}}]}).encode())
+
+    def test_gemini_multi_key_rotation_on_429(self):
+        keys = ["test-gemini-key-1", "test-gemini-key-2"]
+        with patch.object(llm_client, "get_gemini_keys", return_value=keys), \
+             patch.object(llm_client, "NVIDIA_API_KEY", None), \
+             patch.dict(os.environ, {"LLM_PROVIDER": "gemini"}):
+            self.assertEqual(llm_client.get_provider(), "gemini")
+            from urllib.error import HTTPError
+            err429 = HTTPError("url", 429, "Too Many Requests", {}, io.BytesIO(b"rate limit"))
+            with patch("llm_client.urlopen", side_effect=[err429, self.reply('{"answer": "rotated"}')]) as mocked:
+                res = llm_client.call_llm("sys", "p")
+                self.assertEqual(res, {"answer": "rotated"})
+                self.assertEqual(mocked.call_count, 2)
 
 
 if __name__ == "__main__":
