@@ -70,13 +70,13 @@ def frontend(path: str = "index.html"):
 
 @app.route("/api/health")
 def health():
-    provider = llm_client.get_provider()
-    keys_count = len(llm_client.get_gemini_keys()) if provider == "gemini" else (1 if llm_client.NVIDIA_API_KEY else 0)
+    steps = llm_client._steps()
     return jsonify({
         "llm_configured": llm_client.configured(),
-        "provider": provider,
+        "provider": llm_client.get_provider(),
         "model": llm_client.get_model(),
-        "keys_configured": keys_count,
+        "gemini_keys_configured": len(llm_client.get_gemini_keys()),
+        "chain": [f"{provider}:{model}" for provider, model in steps],
     })
 
 

@@ -187,7 +187,7 @@ def summarize(analysis_runs: list[dict], comparisons: list[dict], qa: list[dict]
     field_agree = sum(" ".join(words(str(a))) == " ".join(words(str(b))) for a, b in field_pairs)
 
     answered = [item for item in qa if "error" not in item]
-    factual = [item for item in answered if item.get("verification") not in ("not_in_documents",) and item.get("answer_source") == "nvidia"]
+    factual = [item for item in answered if item.get("verification") not in ("not_in_documents",) and item.get("answer_source") not in (None, "verified_comparison")]
 
     return {
         "classification_accuracy": pct(sum(run["type_correct"] for run in first), len(first)),

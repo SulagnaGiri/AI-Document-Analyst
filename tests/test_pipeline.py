@@ -28,8 +28,23 @@ Order Date: 2026-04-02
 Order Total: INR 48,000"""
 
 
-def llm_on():
-    return patch.object(llm_client, "NVIDIA_API_KEY", "test-token")
+class llm_on:
+    """NVIDIA-only setup (no Gemini keys), so tests do not depend on the developer's .env."""
+
+    def __enter__(self):
+        self._patches = [
+            patch.object(llm_client, "NVIDIA_API_KEY", "test-token"),
+            patch.object(llm_client, "get_gemini_keys", return_value=[]),
+            patch.dict(os.environ, {"LLM_PROVIDER": ""}),
+        ]
+        for item in self._patches:
+            item.start()
+        return self
+
+    def __exit__(self, *exc):
+        for item in reversed(self._patches):
+            item.stop()
+        llm_client._disabled_keys.clear()
 
 
 def fake_analysis(document_type, fields):
@@ -123,7 +138,7 @@ class AnswerTests(unittest.TestCase):
                 "question": "Total?", "documents": [{"name": "inv.txt", "text": INVOICE}],
             })
         self.assertEqual(response.status_code, 503)
-        self.assertIn("NVIDIA_API_KEY", response.get_json()["error"])
+        self.assertIn("API key", response.get_json()["error"])
 
     def test_compare_action_runs_code_comparison_and_llm_cannot_fake_status(self):
         documents = [{"name": "invoice.txt", "text": INVOICE}, {"name": "po.txt", "text": PURCHASE_ORDER}]
@@ -260,7 +275,8 @@ class LlmClientTests(unittest.TestCase):
 
     def test_uses_json_mode_and_auth(self):
         with llm_on(), patch("llm_client.urlopen", return_value=self.reply('{"ok": true}')) as mocked:
-            self.assertEqual(llm_client.call_llm("sys", "Return JSON"), {"ok": True, "_model": llm_client.NVIDIA_MODEL})
+            self.assertEqual(llm_client.call_llm("sys", "Return JSON"),
+                             {"ok": True, "_provider": "nvidia", "_model": llm_client.NVIDIA_MODEL})
         request = mocked.call_args.args[0]
         self.assertEqual(request.get_header("Authorization"), "Bearer test-token")
         self.assertEqual(json.loads(request.data)["response_format"], {"type": "json_object"})
@@ -268,7 +284,7 @@ class LlmClientTests(unittest.TestCase):
     def test_invalid_json_is_retried_once(self):
         broken = '{"answer": "SEC 48"TRUST HIGHSPEED"}'
         with llm_on(), patch("llm_client.urlopen", side_effect=[self.reply(broken), self.reply('{"answer": "ok"}')]) as mocked:
-            self.assertEqual(llm_client.call_llm("sys", "p"), {"answer": "ok", "_model": llm_client.NVIDIA_FALLBACK_MODEL})
+            self.assertEqual(llm_client.call_llm("sys", "p")["_model"], llm_client.NVIDIA_FALLBACK_MODEL)
         self.assertEqual(mocked.call_count, 2)
 
     def test_incomplete_reply_is_retried(self):
@@ -279,15 +295,11 @@ class LlmClientTests(unittest.TestCase):
         self.assertEqual(result["document_type"], "invoice")
         self.assertEqual(mocked.call_count, 2)
 
-    def test_stalled_main_model_falls_back_then_retries_main(self):
-        with llm_on(), patch("llm_client.urlopen", side_effect=[
-            TimeoutError("timed out"), TimeoutError("timed out"), self.reply('{"answer": "ok"}'),
-        ]) as mocked:
-            result = llm_client.call_llm("sys", "p")
-        self.assertEqual(result["answer"], "ok")
-        self.assertEqual(result["_model"], llm_client.NVIDIA_MODEL)
+    def test_every_step_stalling_returns_none(self):
+        with llm_on(), patch("llm_client.urlopen", side_effect=[TimeoutError("timed out")] * 2) as mocked:
+            self.assertIsNone(llm_client.call_llm("sys", "p"))
         models = [json.loads(call.args[0].data)["model"] for call in mocked.call_args_list]
-        self.assertEqual(models, [llm_client.NVIDIA_MODEL, llm_client.NVIDIA_FALLBACK_MODEL, llm_client.NVIDIA_MODEL])
+        self.assertEqual(models, [llm_client.NVIDIA_MODEL, llm_client.NVIDIA_FALLBACK_MODEL])
 
     def test_one_stall_is_answered_by_the_fallback(self):
         with llm_on(), patch("llm_client.urlopen", side_effect=[TimeoutError("timed out"), self.reply('{"answer": "ok"}')]):
@@ -300,7 +312,7 @@ class LlmClientTests(unittest.TestCase):
         self.assertEqual(result["_model"], llm_client.NVIDIA_FALLBACK_MODEL)
         self.assertEqual(mocked.call_count, 2)
 
-    def test_bad_key_does_not_try_other_models(self):
+    def test_bad_key_is_not_retried_on_other_models_of_the_same_provider(self):
         denied = HTTPError("url", 401, "Unauthorized", {}, io.BytesIO(b"bad key"))
         with llm_on(), patch("llm_client.urlopen", side_effect=[denied]) as mocked:
             self.assertIsNone(llm_client.call_llm("sys", "p"))
@@ -330,22 +342,78 @@ class PdfTests(unittest.TestCase):
 
 
 class GeminiClientTests(unittest.TestCase):
+    KEYS = ["test-gemini-key-1", "test-gemini-key-2"]
+
     @staticmethod
     def reply(content):
         return io.BytesIO(json.dumps({"choices": [{"message": {"content": content}}]}).encode())
 
-    def test_gemini_multi_key_rotation_on_429(self):
-        keys = ["test-gemini-key-1", "test-gemini-key-2"]
-        with patch.object(llm_client, "get_gemini_keys", return_value=keys), \
-             patch.object(llm_client, "NVIDIA_API_KEY", None), \
-             patch.dict(os.environ, {"LLM_PROVIDER": "gemini"}):
-            self.assertEqual(llm_client.get_provider(), "gemini")
-            from urllib.error import HTTPError
-            err429 = HTTPError("url", 429, "Too Many Requests", {}, io.BytesIO(b"rate limit"))
-            with patch("llm_client.urlopen", side_effect=[err429, self.reply('{"answer": "rotated"}')]) as mocked:
-                res = llm_client.call_llm("sys", "p")
-                self.assertEqual(res, {"answer": "rotated"})
-                self.assertEqual(mocked.call_count, 2)
+    def setUp(self):
+        self._patches = [
+            patch.object(llm_client, "get_gemini_keys", return_value=self.KEYS),
+            patch.object(llm_client, "NVIDIA_API_KEY", "test-nvidia"),
+            patch.dict(os.environ, {"LLM_PROVIDER": ""}),
+        ]
+        for item in self._patches:
+            item.start()
+
+    def tearDown(self):
+        for item in reversed(self._patches):
+            item.stop()
+        llm_client._disabled_keys.clear()
+
+    def test_gemini_is_first_and_nvidia_models_are_the_backups(self):
+        self.assertEqual(llm_client._steps(), [
+            ("gemini", llm_client.GEMINI_MODEL),
+            ("nvidia", llm_client.NVIDIA_MODEL),
+            ("nvidia", llm_client.NVIDIA_FALLBACK_MODEL),
+        ])
+        self.assertEqual(llm_client.get_provider(), "gemini")
+
+    def test_llm_provider_nvidia_puts_nvidia_first(self):
+        with patch.dict(os.environ, {"LLM_PROVIDER": "nvidia"}):
+            self.assertEqual(llm_client._steps()[0], ("nvidia", llm_client.NVIDIA_MODEL))
+
+    def test_rate_limited_key_rotates_to_the_next_key(self):
+        err429 = HTTPError("url", 429, "Too Many Requests", {}, io.BytesIO(b"rate limit"))
+        with patch("llm_client.urlopen", side_effect=[err429, self.reply('{"answer": "rotated"}')]) as mocked:
+            result = llm_client.call_llm("sys", "p")
+        self.assertEqual(result, {"answer": "rotated", "_provider": "gemini", "_model": llm_client.GEMINI_MODEL})
+        used = {call.args[0].get_header("Authorization") for call in mocked.call_args_list}
+        self.assertEqual(used, {"Bearer test-gemini-key-1", "Bearer test-gemini-key-2"})
+
+    def test_gemini_stall_falls_back_to_nvidia(self):
+        with patch("llm_client.urlopen", side_effect=[TimeoutError("timed out"), self.reply('{"answer": "ok"}')]) as mocked:
+            result = llm_client.call_llm("sys", "p")
+        self.assertEqual((result["_provider"], result["_model"]), ("nvidia", llm_client.NVIDIA_MODEL))
+        self.assertEqual(mocked.call_args_list[1].args[0].get_header("Authorization"), "Bearer test-nvidia")
+
+    def test_all_gemini_keys_rate_limited_falls_back_to_nvidia(self):
+        def err429():
+            return HTTPError("url", 429, "Too Many Requests", {}, io.BytesIO(b"quota"))
+        with patch("llm_client.urlopen", side_effect=[err429(), err429(), self.reply('{"answer": "ok"}')]):
+            self.assertEqual(llm_client.call_llm("sys", "p")["_provider"], "nvidia")
+
+    def test_total_time_budget_stops_further_steps(self):
+        clock = iter([0, 0, 290])  # deadline set at 0; the second step would start after the 280 s budget
+        with patch.object(llm_client, "LLM_TOTAL_BUDGET", 280), patch("llm_client.time.monotonic", side_effect=lambda: next(clock)), \
+                patch("llm_client.urlopen", side_effect=[TimeoutError("timed out")]) as mocked:
+            self.assertIsNone(llm_client.call_llm("sys", "p"))
+        self.assertEqual(mocked.call_count, 1)
+
+    def test_each_request_waits_no_longer_than_the_remaining_budget(self):
+        clock = iter([0, 260])
+        with patch.object(llm_client, "LLM_TOTAL_BUDGET", 280), patch("llm_client.time.monotonic", side_effect=lambda: next(clock)), \
+                patch("llm_client.urlopen", return_value=self.reply('{"answer": "ok"}')) as mocked:
+            llm_client.call_llm("sys", "p")
+        self.assertEqual(mocked.call_args.kwargs["timeout"], 20)
+
+    def test_answer_reports_the_model_that_actually_answered(self):
+        reply = {"action": "answer", "answer": "Northstar Supplies.", "citations": [{"document": "D1", "lines": [2]}],
+                 "_provider": "nvidia", "_model": "nvidia/backup"}
+        with patch.object(pipeline, "_llm_answer_question", return_value=reply):
+            result = pipeline.answer("Who is the vendor?", [{"name": "inv.txt", "text": INVOICE}])
+        self.assertEqual((result["answer_source"], result["model"]), ("nvidia", "nvidia/backup"))
 
 
 if __name__ == "__main__":

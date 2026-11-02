@@ -80,9 +80,9 @@ function formatMoney(value, currency) {
 
 function ModelBadge({ health }) {
   if (!health) return <span className="badge badge-muted">Backend offline</span>
-  if (!health.llm_configured) return <span className="badge badge-warn">Rule-based only</span>
+  if (!health.llm_configured) return <span className="badge badge-warn">No API key configured</span>
   return (
-    <span className="badge badge-ok" title={health.model}>
+    <span className="badge badge-ok" title={`Tried in order: ${(health.chain || [health.model]).join(' → ')}`}>
       <span className="dot" /> {health.model.split('/').pop()}
     </span>
   )
@@ -199,10 +199,10 @@ function AnalysisView({ analysis }) {
 function ChatMessage({ message }) {
   const { response } = message
   const source = response.answer_source
-  const sourceLabel = {
-    nvidia: `Answered by ${(response.model || 'NVIDIA').split('/').pop()}`,
-    verified_comparison: 'Verified comparison',
-  }[source]
+  // Names the model that actually answered, which is a backup when the first model failed.
+  const sourceLabel = source === 'verified_comparison'
+    ? 'Verified comparison'
+    : `Answered by ${(response.model || source || 'model').split('/').pop()}`
   const verification = VERIFICATION[response.verification]
   return (
     <div className="turn">

@@ -204,10 +204,8 @@ The application follows a hybrid **LLM Reasoning + Deterministic Verification** 
                      L1, L2, L3 ... Ln
                             |
                             v
-                  NVIDIA NIM API Client
-                            |
-                            v
-               Nemotron 3.5 Super-VL Model
+             LLM client (llm_client.py)
+       Gemini 3.5 Flash  ->  NVIDIA Nemotron backups
                             |
                +------------+-------------+
                |            |             |
@@ -259,7 +257,7 @@ The application follows a hybrid **LLM Reasoning + Deterministic Verification** 
 
 **LLM Responsibilities**
 
-The model `nvidia/nemotron-3.5-super-vl-120b-a12b` handles:
+The LLM (Gemini `gemini-3.5-flash`, with NVIDIA Nemotron models as backups) handles:
 
 - Document classification.
 - Semantic field extraction.
@@ -455,9 +453,9 @@ Responsibilities:
 
 ## 6.3 LLM Reasoning Layer
 
-**Technology:** NVIDIA NIM API
+**Technology:** Google Gemini API (primary) and NVIDIA NIM API (backup), both through their OpenAI-compatible chat endpoints
 
-**Model:** `nvidia/nemotron-3.5-super-vl-120b-a12b`
+**Models, tried in order:** `gemini-3.5-flash` → `nvidia/nemotron-3.5-super-vl-120b-a12b` → `nvidia/nemotron-3-ultra-550b-a55b`
 
 Responsibilities:
 
@@ -522,8 +520,8 @@ flowchart TD
     end
 
     subgraph LLM_Layer["3. LLM Reasoning Layer"]
-        CLIENT["NVIDIA NIM Client (llm_client.py)<br/>OpenAI-compatible JSON Mode + Retry"]
-        MODEL[("nvidia/nemotron-3.5-super-vl-120b-a12b<br/>Reasoning Model")]
+        CLIENT["LLM Client (llm_client.py)<br/>JSON mode, key rotation, timeouts, fallback chain"]
+        MODEL[("gemini-3.5-flash (primary)<br/>Nemotron 3.5 Super VL, Nemotron 3 Ultra (backups)")]
     end
 
     subgraph Grounding["4. Grounding & Verification Engine"]
@@ -629,16 +627,18 @@ The `grounding.py` module:
 2. Assigns unique 1-based line identifiers.
 3. Creates a structured representation of each document.
 
-Example:
+Example (the sample invoice `data/sample_documents/invoice_204.txt`):
 
 ```text
-L1: Invoice Number: INV-778
-L2: Vendor: ABC Technologies Pvt Ltd
-L3: Purchase Order: PO-778
-L4: Invoice Date: 15-10-2026
-L5: Subtotal: ₹50,000.00
-L6: GST: ₹2,400.00
-L7: Total Amount: ₹52,400.00
+L1: TAX INVOICE
+L2: Vendor: Northstar Supplies
+L3: Invoice No: INV-204
+L4: Invoice Date: 2026-04-10
+L5: Purchase Order: PO-778
+L6: Subtotal: INR 44,400
+L7: Tax: INR 8,000
+L8: Grand Total: INR 52,400
+L9: Payment Due: 2026-05-10
 ```
 
 ### Context Isolation
@@ -648,14 +648,16 @@ Each document is encapsulated in structured XML-style tags.
 Example:
 
 ```xml
-<document id="D1" name="invoice_778.pdf">
-    L1: Invoice Number: INV-778
-    L2: Vendor: ABC Technologies Pvt Ltd
-    L3: Purchase Order: PO-778
-    L4: Invoice Date: 15-10-2026
-    L5: Subtotal: ₹50,000.00
-    L6: GST: ₹2,400.00
-    L7: Total Amount: ₹52,400.00
+<document id="D1" name="invoice_204.txt">
+    L1: TAX INVOICE
+    L2: Vendor: Northstar Supplies
+    L3: Invoice No: INV-204
+    L4: Invoice Date: 2026-04-10
+    L5: Purchase Order: PO-778
+    L6: Subtotal: INR 44,400
+    L7: Tax: INR 8,000
+    L8: Grand Total: INR 52,400
+    L9: Payment Due: 2026-05-10
 </document>
 ```
 
@@ -679,23 +681,24 @@ The model is instructed to reject and flag embedded attempts to change its behav
 
 ## Stage 3: LLM Inference & Structured Reasoning
 
-### Primary Model
+### Models and Fallback Chain
 
 ```text
-nvidia/nemotron-3.5-super-vl-120b-a12b
+gemini-3.5-flash                          (primary, Google Gemini API)
+nvidia/nemotron-3.5-super-vl-120b-a12b    (backup 1, NVIDIA NIM)
+nvidia/nemotron-3-ultra-550b-a55b         (backup 2, NVIDIA NIM)
 ```
 
-The model is used for document reasoning and structured information extraction.
+Each request waits at most `LLM_TIMEOUT` (50 s). If a model times out, returns invalid or incomplete JSON, has been withdrawn (HTTP 404/410), or every Gemini key is rate-limited (HTTP 429), the next model in the chain is tried. A whole call never spends more than `LLM_TOTAL_BUDGET` (280 s), which keeps it inside Vercel's 300-second function limit. Each answer records which model actually produced it.
 
-### NVIDIA NIM Integration
+### API Integration
 
-The application communicates with NVIDIA's NIM API through:
+Both providers are called through OpenAI-compatible chat endpoints:
 
 ```text
-integrate.api.nvidia.com
+generativelanguage.googleapis.com/v1beta/openai   (Gemini)
+integrate.api.nvidia.com/v1                       (NVIDIA NIM)
 ```
-
-The API uses an OpenAI-compatible request format.
 
 ### JSON Mode
 
@@ -902,9 +905,9 @@ Legal entity suffixes are stripped to reduce false-positive vendor mismatches.
 Examples:
 
 ```text
-ABC Technologies Pvt Ltd
-ABC Technologies
-ABC Technologies LLC
+Northstar Supplies Pvt Ltd
+Northstar Supplies
+NORTHSTAR SUPPLIES LTD
 ```
 
 ### C. Final Reconciliation Decision
@@ -913,7 +916,7 @@ The reconciliation engine produces one of three statuses.
 
 | Status | Condition |
 |---|---|
-| `MATCH` | Totals, currencies, and line items agree across verified fields. |
+| `MATCH` | The verified totals are equal, and currency, vendor and PO reference agree wherever both documents state them. (Line items are not compared.) |
 | `MISMATCH` | One or more validated discrepancies are detected. |
 | `INSUFFICIENT_DATA` | Required documents are missing or verified financial values cannot be extracted. |
 
@@ -1003,7 +1006,7 @@ An uploaded document in PDF, TXT, MD, or EML format.
 2. Normalize encoding and layout.
 3. Generate numbered lines.
 4. Build document context.
-5. Send context to the NVIDIA NIM API.
+5. Send context to the LLM (Gemini first, NVIDIA as backup).
 6. Receive structured JSON.
 7. Validate citations.
 8. Verify extracted values.
@@ -1033,24 +1036,31 @@ This is the headline business use case of the project.
 
 Two documents are uploaded.
 
-**Invoice**
+These are the sample documents loaded by **Load sample set** (`data/sample_documents/`).
+
+**Invoice** (`invoice_204.txt`)
 
 ```text
-Invoice Number: INV-778
+TAX INVOICE
+Vendor: Northstar Supplies
+Invoice No: INV-204
+Invoice Date: 2026-04-10
 Purchase Order: PO-778
-Vendor: ABC Technologies Pvt Ltd
-Subtotal: ₹50,000.00
-Tax Amount: ₹2,400.00
-Total Amount: ₹52,400.00
+Subtotal: INR 44,400
+Tax: INR 8,000
+Grand Total: INR 52,400
+Payment Due: 2026-05-10
 ```
 
-**Purchase Order**
+**Purchase Order** (`purchase_order_778.txt`)
 
 ```text
+PURCHASE ORDER
+Supplier: Northstar Supplies
 PO Number: PO-778
-Vendor: ABC Technologies
-Subtotal: ₹48,000.00
-Total Amount: ₹48,000.00
+Order Date: 2026-04-02
+Order Total: INR 48,000
+Approved by: Finance
 ```
 
 ### Reconciliation Process
@@ -1160,8 +1170,9 @@ The following table describes the frameworks, libraries, models, and tools used 
 
 | Component / Task | Tool / Library / Model | Role & Responsibilities |
 |---|---|---|
-| Primary Reasoning Model | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Document classification, semantic extraction, summarization, reasoning, table interpretation, and Q&A intent detection. |
-| Model Inference Gateway | NVIDIA NIM API (`integrate.api.nvidia.com`) | Cloud-hosted OpenAI-compatible inference endpoint supporting JSON mode. |
+| Primary Reasoning Model | `gemini-3.5-flash` (Google Gemini API) | Document classification, semantic extraction, summarization, reasoning, table interpretation, and Q&A intent detection. |
+| Backup Models | `nvidia/nemotron-3.5-super-vl-120b-a12b`, `nvidia/nemotron-3-ultra-550b-a55b` (NVIDIA NIM) | Used automatically when Gemini fails, stalls or is rate-limited. |
+| Model Inference Gateways | Gemini and NVIDIA OpenAI-compatible chat endpoints | JSON-mode inference; `llm_client.py` handles key rotation, timeouts and the fallback chain. |
 | Backend Web Framework | Flask 3.0+ (`Flask`) | Lightweight Python REST API providing document upload, analysis, comparison, Q&A, health, and sample endpoints. |
 | CORS Middleware | Flask-CORS (`CORS`) | Manages Cross-Origin Resource Sharing between frontend and backend during local development. |
 | PDF Extraction Engine | pypdf 4.0+ (`PdfReader`) | Extracts structured PDF text using layout mode while preserving column spacing. |
@@ -1182,51 +1193,22 @@ The following table describes the frameworks, libraries, models, and tools used 
 
 ```text
 AI-Document-Analyst/
-│
-├── backend/
-│   ├── app.py
-│   ├── pipeline.py
-│   ├── grounding.py
-│   ├── checks.py
-│   ├── document_types.py
-│   ├── llm_client.py
-│   └── requirements.txt
-│
-├── frontend/
-│   ├── src/
-│   ├── package.json
-│   ├── vite.config.js
-│   └── ...
-│
-├── evaluation/
-│   ├── cases.json
-│   └── run_eval.py
-│
-├── tests/
-│   └── ...
-│
-├── data/
-│   └── sample_documents/
-│
-├── docs/
-│   ├── design.md
-│   ├── prompts.md
-│   ├── evaluation.md
-│   ├── failure_cases.md
-│   └── ai_usage.md
-│
-├── public/
-│   └── ...
-│
-├── .env.example
-├── .gitignore
+├── app.py                  Flask API, PDF extraction, serves the built frontend
+├── pipeline.py             Analysis, Q&A and comparison; all prompts
+├── grounding.py            Numbered-line context, citation and value verification
+├── checks.py               Invoice vs PO comparison, subtotal + tax = total
+├── document_types.py       Document types and their fields (configuration)
+├── llm_client.py           Gemini + NVIDIA client with fallback chain
 ├── requirements.txt
 ├── vercel.json
-├── app.py
-└── README.md
+├── .env.example
+├── frontend/               React + Vite source (npm run build writes public/)
+├── public/                 Built frontend, served by Flask / Vercel
+├── data/sample_documents/  Demo documents, including the seeded invoice/PO conflict
+├── evaluation/             cases.json (45 cases) and run_eval.py
+├── tests/                  Unit tests (LLM mocked)
+└── docs/                   design, prompts, evaluation, failure cases, AI usage
 ```
-
-**Note:** The above is a logical overview of the repository. Refer to the actual repository for the exact directory arrangement. The original application uses the root-level Python modules referenced throughout this README.
 
 ---
 
@@ -1282,16 +1264,15 @@ Make sure the following tools are installed:
 | Python | 3.11+ |
 | Node.js | 20+ |
 | npm | Compatible with Node.js |
-| NVIDIA API Key | Required |
+| Gemini and/or NVIDIA API key | At least one required |
 | Git | Recommended |
 
-### NVIDIA API Key
+### API Keys
 
-Generate an API key from:
+- **Gemini (primary):** create a key at https://aistudio.google.com/apikey. Several keys can be listed; they are rotated when one hits its rate limit.
+- **NVIDIA (backup):** create a key at https://build.nvidia.com/.
 
-https://build.nvidia.com/
-
-The application uses this key to communicate with the NVIDIA NIM inference API.
+With both configured, Gemini answers and NVIDIA takes over when Gemini fails or runs out of quota.
 
 ## Step 1: Clone the Repository
 
@@ -1337,9 +1318,10 @@ Create the environment file:
 cp .env.example .env
 ```
 
-Add your NVIDIA API key:
+Add your keys:
 
 ```env
+GEMINI_API_KEYS=your_gemini_key_1,your_gemini_key_2
 NVIDIA_API_KEY=your_nvidia_api_key
 ```
 
@@ -1436,7 +1418,7 @@ The project includes automated tests and a real-model evaluation suite.
 
 The unit tests use mocked LLM responses.
 
-This allows the deterministic pipeline to be tested without making live NVIDIA API requests.
+This allows the deterministic pipeline and the model fallback chain to be tested without live API requests.
 
 Run:
 
@@ -1454,21 +1436,105 @@ The project includes an automated evaluation suite:
 python evaluation/run_eval.py
 ```
 
-| Setting (`.env`) | Default | Purpose |
+This evaluation:
+
+- Calls the live model.
+- Runs the document analysis pipeline.
+- Tests document comparison.
+- Evaluates question-answering behavior.
+- Measures performance across predefined cases.
+- Writes evaluation results to `docs/evaluation.md`.
+
+**Requirements:**
+
+- A valid Gemini and/or NVIDIA API key.
+- Correct environment configuration.
+- Network access to the model APIs.
+
+**Expected execution time:** Approximately 10 minutes.
+
+## 17.3 Evaluation Dataset
+
+The benchmark contains 45 test cases.
+
+| Category | Number of Cases |
+|---|---:|
+| Document Analysis | 24 |
+| Document Comparison | 7 |
+| Question Answering | 14 |
+| **Total** | **45** |
+
+The cases include:
+
+- Normal scenarios.
+- Edge cases.
+- Ambiguous documents.
+- Failure scenarios.
+
+## 17.4 Failure Case Analysis
+
+The project maintains a separate failure-case document:
+
+```text
+docs/failure_cases.md
+```
+
+It documents 22 failure cases, including 6 cases identified through evaluation.
+
+## 17.5 Evaluation Documentation
+
+Evaluation results are stored in:
+
+```text
+docs/evaluation.md
+```
+
+The benchmark execution script is:
+
+```text
+evaluation/run_eval.py
+```
+
+---
+
+# 18. Environment Configuration
+
+The application uses environment variables to manage API credentials, multi-key pools, and runtime configuration.
+
+Model calls go through a chain: **Gemini first, NVIDIA as backup**. Each step waits at most `LLM_TIMEOUT` seconds; if a model fails, stalls, is rate-limited on every key, or has been withdrawn, the next step answers.
+
+```text
+gemini-3.5-flash (rotates over all keys on HTTP 429)  ->  nemotron-3.5-super-vl  ->  nemotron-3-ultra
+```
+
+| Setting | Default | Purpose |
 |---|---|---|
-| `NVIDIA_API_KEY` | (required) | NVIDIA API key |
-| `NVIDIA_MODEL` | `nvidia/nemotron-3.5-super-vl-120b-a12b` | Any chat model on the NVIDIA API that supports JSON mode |
-| `PORT` | `5001` | Backend port (the frontend proxies `/api` to it) |
+| `GEMINI_API_KEYS` | Optional (primary) | Comma-separated pool of Gemini keys, rotated round-robin; a rate-limited key (429) is skipped for the next one. |
+| `GEMINI_API_KEY` | Optional | A single Gemini key (also `GEMINI_API_KEY_1` … `_30`). |
+| `GEMINI_MODEL` | `gemini-3.5-flash` | Gemini model. `gemini-2.5-flash` is no longer available to new keys. |
+| `NVIDIA_API_KEY` | Optional (backup) | NVIDIA NIM API key. |
+| `NVIDIA_MODEL` | `nvidia/nemotron-3.5-super-vl-120b-a12b` | First NVIDIA backup model. |
+| `NVIDIA_FALLBACK_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | Second NVIDIA backup model; empty disables it. |
+| `LLM_PROVIDER` | (auto: Gemini first) | Set to `nvidia` to try NVIDIA before Gemini. |
+| `LLM_TIMEOUT` | `50` | Seconds to wait for one model reply before trying the next step. |
+| `LLM_TOTAL_BUDGET` | `280` | Maximum seconds for one request across all retries (Vercel stops functions at 300 s). |
+| `PORT` | `5001` | Backend server port. |
 
-## Author
+At least one of the Gemini or NVIDIA keys must be set.
 
-Sulagna Giri (individual submission)
+### Example `.env`
 
-## Live application
+```env
+GEMINI_API_KEYS=your_gemini_key_1,your_gemini_key_2
+NVIDIA_API_KEY=your_nvidia_api_key
+PORT=5001
+```
 
-> **TODO:** add the Vercel URL once deployed.
+Never commit the actual `.env` file or expose API credentials in frontend code or public repositories. `.env.example` must only ever contain placeholders.
 
-### Deploying to Vercel
+---
+
+# 19. Deployment on Vercel
 
 The application is designed to deploy as a single Vercel project.
 
@@ -1531,14 +1597,11 @@ Vercel Dashboard
 Add:
 
 ```env
+GEMINI_API_KEYS=your_gemini_key_1,your_gemini_key_2
 NVIDIA_API_KEY=your_nvidia_api_key
 ```
 
-Optionally configure:
-
-```env
-NVIDIA_MODEL=nvidia/nemotron-3.5-super-vl-120b-a12b
-```
+Optionally configure `GEMINI_MODEL`, `NVIDIA_MODEL`, `NVIDIA_FALLBACK_MODEL` or `LLM_TIMEOUT` (see section 18).
 
 ## Step 5: Redeploy
 
@@ -1552,19 +1615,173 @@ The following deployment constraints apply to the documented setup:
 
 | Configuration | Details |
 |---|---|
-| [`docs/design.md`](docs/design.md) | **Solution design**: decomposition, architecture diagram, where the LLM is used vs code, trade-offs |
-| [`docs/prompts.md`](docs/prompts.md) | **Prompt engineering**: V1 → problem → V2 → … → final prompts, and why |
-| [`docs/evaluation.md`](docs/evaluation.md) | **Evaluation results** on the 45-case test set |
-| [`docs/failure_cases.md`](docs/failure_cases.md) | **Failure cases and improvements** (19 cases, 6 found by the evaluation) |
-| [`docs/ai_usage.md`](docs/ai_usage.md) | **AI usage** during development |
-| [`pipeline.py`](pipeline.py) | Analysis, Q&A and comparison; all prompts |
-| [`grounding.py`](grounding.py) | Numbered-line context, citation and value verification, answer labels |
-| [`checks.py`](checks.py) | Deterministic checks: invoice vs PO, subtotal + tax = total |
-| [`document_types.py`](document_types.py) | Document types, their fields and required fields (configuration) |
-| [`llm_client.py`](llm_client.py) | NVIDIA API client (JSON mode, retry, error logging) |
-| [`app.py`](app.py) | Flask API and PDF text extraction |
-| [`frontend/`](frontend) | React UI |
-| [`evaluation/cases.json`](evaluation/cases.json) | Test set: 24 analysis, 7 comparison and 14 Q&A cases (normal, edge, ambiguous, failure) |
-| [`evaluation/run_eval.py`](evaluation/run_eval.py) | Scores the live pipeline and writes `docs/evaluation.md` |
-| [`tests/`](tests) | Unit tests for everything code is responsible for |
-| [`data/sample_documents/`](data/sample_documents) | Demo document set with the seeded invoice / PO conflict |
+| Platform | Vercel |
+| Backend | Flask Python serverless function |
+| Frontend | Static production build |
+| Maximum execution duration | Up to 300 seconds through `maxDuration` |
+| Initial request | May take 1–2 minutes after idle while the model warms up |
+| Upload limit | 4.5 MB under the documented Vercel configuration |
+
+The 300-second execution limit is the Hobby-plan maximum specified in the original deployment configuration. Actual platform limits depend on the selected Vercel plan and deployment settings.
+
+---
+
+# 20. Security & Reliability Considerations
+
+The system uses multiple mechanisms to improve reliability and protect sensitive application configuration.
+
+### 20.1 API Key Protection
+
+- Gemini and NVIDIA API credentials are stored in environment variables.
+- The `.env` file should not be committed to GitHub, and `.env.example` must contain placeholders only.
+- API credentials remain on the backend; frontend code never sees them.
+- A key that has ever been committed must be revoked and replaced, because git history keeps it.
+
+### 20.2 Prompt Injection Defense
+
+- Uploaded documents are treated as untrusted input.
+- Embedded instructions are treated as document content.
+- The model is instructed not to follow instructions found inside uploaded documents.
+
+### 20.3 Citation Validation
+
+- Model-generated line references are resolved against actual document lines.
+- Invalid citations are not treated as verified evidence.
+- Extracted values are checked against their cited lines.
+
+### 20.4 Deterministic Financial Validation
+
+- Financial arithmetic uses `Decimal`.
+- Only verified values enter reconciliation.
+- Missing verified data results in `INSUFFICIENT_DATA`.
+
+### 20.5 API Resilience
+
+- JSON response sanitization.
+- Retry handling.
+- Required schema-key validation.
+- Concurrent document processing.
+- Content-based caching.
+
+### 20.6 Document Privacy
+
+Uploaded business documents may contain confidential financial or commercial information. Production deployment should include appropriate access control, secure transport, retention policies, and protected storage.
+
+---
+
+# 21. Known Limitations & Future Improvements
+
+The current architecture provides document analysis, evidence verification, and reconciliation. Several areas can be expanded in future versions.
+
+### Potential Improvements
+
+**1. OCR Integration**
+
+Add dedicated OCR processing for scanned PDFs and image-based documents.
+
+**2. Improved Table Extraction**
+
+Introduce specialized table extraction to handle complex financial tables, merged cells, and multi-page tables more reliably.
+
+**3. Multilingual Document Support**
+
+Expand testing and support for documents containing Bengali, Hindi, and other languages.
+
+**4. Advanced Document Matching**
+
+Improve matching across invoices, purchase orders, delivery notes, and related email conversations.
+
+**5. Database Integration**
+
+Introduce persistent storage for uploaded documents, extracted fields, analysis results, and audit history.
+
+**6. Authentication and Authorization**
+
+Add user authentication, role-based access control, and organization-level document isolation.
+
+**7. Document Version Tracking**
+
+Track document revisions and identify changes between different versions.
+
+**8. Advanced Evaluation**
+
+Expand the benchmark dataset and measure extraction accuracy, citation precision, reconciliation accuracy, and unsupported-answer rates separately.
+
+**9. Production Monitoring**
+
+Introduce structured logging, performance monitoring, API usage tracking, and failure alerts.
+
+**10. Human-in-the-Loop Review**
+
+Allow finance teams to review and approve flagged discrepancies before taking business action.
+
+---
+
+# 22. Author
+
+**Sulagna Giri**
+
+Individual Submission
+
+---
+
+# 23. Live Application
+
+**Live Application:** https://ai-document-analyst.vercel.app/
+
+The first request after a quiet period can take longer while the function and model warm up.
+
+---
+
+# 24. Demo
+
+> **TODO:** Add the demo video or screenshots link here.
+
+The demonstration should cover:
+
+1. Loading the sample document set.
+2. Uploading multiple business documents.
+3. Document classification.
+4. Extracted field visualization.
+5. Evidence and citation verification.
+6. Invoice vs. purchase order reconciliation.
+7. Detection of the ₹4,400 discrepancy.
+8. Asking questions across uploaded documents.
+9. Reviewing verification labels.
+
+---
+
+# 25. Repository Guide
+
+The following files contain the main implementation, architecture, prompts, evaluation results, and testing resources.
+
+| File / Directory | Description |
+|---|---|
+| `docs/design.md` | **Solution design:** Architecture decomposition, system design, LLM responsibilities, deterministic verification, and technical trade-offs. |
+| `docs/prompts.md` | **Prompt engineering:** Prompt evolution from V1 through the final version, including identified problems and improvements. |
+| `docs/evaluation.md` | **Evaluation results:** Performance results from the 45-case benchmark. |
+| `docs/failure_cases.md` | **Failure analysis:** Documentation of 22 failure cases, including 6 discovered during evaluation. |
+| `docs/ai_usage.md` | **AI usage:** Documentation of AI-assisted development. |
+| `pipeline.py` | Core analysis, Q&A, comparison workflows, and prompts. |
+| `grounding.py` | Numbered-line context, citation resolution, value verification, and answer confidence labels. |
+| `checks.py` | Deterministic validation logic, invoice vs. PO comparison, and subtotal-plus-tax calculations. |
+| `document_types.py` | Document type definitions, supported fields, and required fields configuration. |
+| `llm_client.py` | Gemini + NVIDIA client: JSON mode, Gemini key rotation, per-request timeout, total time budget, and model fallback chain. |
+| `app.py` | Flask API, document upload, PDF text extraction, and backend application logic. |
+| `frontend/` | React frontend application and user interface. |
+| `evaluation/cases.json` | Benchmark dataset containing 24 analysis, 7 comparison, and 14 Q&A cases. |
+| `evaluation/run_eval.py` | Executes live model evaluation and generates `docs/evaluation.md`. |
+| `tests/` | Unit tests covering deterministic functionality and pipeline behavior. |
+| `data/sample_documents/` | Sample business documents, including the seeded invoice and purchase order conflict. |
+
+---
+
+# Final Architecture Principle
+
+The most important principle behind AI Document Analyst is the separation of AI reasoning from deterministic verification.
+
+**The LLM understands. The verification engine checks. The business logic decides. The user sees the evidence.**
+
+This approach makes the system more transparent and suitable for business workflows where accuracy, traceability, and accountability matter.
+
+**AI Document Analyst — Turning Unstructured Business Documents into Verified, Actionable Intelligence.**

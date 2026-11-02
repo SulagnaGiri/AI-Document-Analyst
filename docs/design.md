@@ -29,7 +29,7 @@ flowchart LR
       QA[answer] --> CTX
       CMP[compare] --> AN
       CTX[grounding.format_context<br/>numbered lines L1..Ln<br/>per document D1..Dn] --> LLM
-      LLM[llm_client.call_llm<br/>Nemotron 3.5 Super, JSON mode] --> VER
+      LLM[llm_client.call_llm<br/>Gemini 3.5 Flash, NVIDIA backups, JSON mode] --> VER
       VER[grounding: resolve cited lines,<br/>check values are on them,<br/>label answer]
     end
 
@@ -84,7 +84,7 @@ Results are cached per document text, so analyzing then comparing does not call 
 * **Reasoning.** Adding CGST and SGST, summing quantities across table rows, applying a policy rule to a case ("Do I need approval for ₹15,000?"), noticing that documents disagree.
 * **Summaries and follow-up questions.**
 
-**Model choice: `nvidia/nemotron-3.5-super-vl-120b-a12b`.** It is a reasoning model (it thinks before answering; the thinking is returned separately and not shown), supports JSON mode, and answers in about 5–15 seconds. We tested what our API key could access: `meta/llama-3.3-70b-instruct`, the original model, had been retired (HTTP 410); `nemotron-nano-3-30b` was not available to our account; `nemotron-3-ultra-550b` is available but slower, and was not needed once the design was fixed. Later, `nemotron-3-super-120b-a12b` was also withdrawn for our key (HTTP 404), and we moved to its successor `nvidia/nemotron-3.5-super-vl-120b-a12b` by changing one setting (see failure case 19).
+**Model choice: `gemini-3.5-flash` first, NVIDIA Nemotron as backup.** Gemini 3.5 Flash is the primary model (a teammate added Gemini support with rotation over several API keys). In a live run it analyzed all six sample documents correctly (every field verified, 7–10 s each). Sayan's original default, `gemini-2.5-flash`, returns "no longer available to new users" for our keys. The backups are `nvidia/nemotron-3.5-super-vl-120b-a12b`, which scored 100% on the 45-case evaluation, and `nvidia/nemotron-3-ultra-550b-a55b`, which stayed responsive while the first one was stalling. History: the project started on `meta/llama-3.3-70b-instruct` (retired, HTTP 410), then `nemotron-3-super-120b-a12b` (withdrawn, HTTP 404); see failure cases 1 and 19.
 
 ## 4. Where we use code instead, and why
 
@@ -107,7 +107,7 @@ Results are cached per document text, so analyzing then comparing does not call 
 7. **JSON mode plus one retry.** Product names such as `48"` used to break the model's JSON roughly one time in three. Replies that parse but lack required keys (an occasional bare `{"document_type": "unknown"}`) are retried the same way.
 8. **Caching analyses** by document text so "Analyze all" followed by "Run check" or a comparison question reuses results.
 9. **Documents are data, not instructions.** The system prompt tells the model to ignore and report instructions embedded in documents. Evaluation case Q14 checks this with an "ignore previous instructions" line. *Trade-off:* this is a prompt-level defence, not a guarantee; the code-side checks (citations, verified values, code-decided comparison) limit what a successful injection could change.
-10. **Time limit, retry and a fallback model.** NVIDIA's free endpoints are shared: in testing, a 29-token reply sometimes waited 68 s in a queue, and two models were withdrawn. Each call waits at most 50 s (`NVIDIA_TIMEOUT`), then tries `nemotron-3-ultra-550b-a55b`, then the main model again; HTTP 404/410 skips straight to the fallback, and 401/403 stops (a bad key will not work on any model). Each answer records which model produced it. *Trade-off:* the fallback was checked on a small set of real prompts, not the full evaluation, and a slow reply over 50 s is abandoned even if it would have succeeded.
+10. **Time limits and a model fallback chain.** Hosted endpoints fail in several ways we observed: queues that stall (a 29-token NVIDIA reply once waited 68 s), withdrawn models, and per-key quotas (one free Gemini key ran out after about eight requests). `llm_client.call_llm` walks Gemini (rotating keys on HTTP 429) → Nemotron 3.5 Super VL → Nemotron 3 Ultra. Each request waits at most `LLM_TIMEOUT` (50 s), and a whole call at most `LLM_TOTAL_BUDGET` (280 s), so it returns a clear error before Vercel's 300 s limit stops it. HTTP 404/410 moves straight to the next model; 401/403 drops that key. Each answer records which model produced it. *Trade-off:* the evaluation was run on Nemotron 3.5 Super VL; Gemini and Ultra were checked on real sample prompts but not yet on the full 45 cases.
 
 ## 6. Known limitations
 

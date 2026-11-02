@@ -25,6 +25,7 @@ Every case below was observed while building and testing this system. Each has a
 | 19 | The replacement model was withdrawn too | ✅ |
 | 20 | A scanned PDF produced a confusing "Document text is required" error | ✅ (clear error); OCR open |
 | 21 | The deployed app stalled for minutes, then failed, while NVIDIA's queue was busy | ✅ |
+| 22 | Merging the Gemini client broke the retry and backup logic and picked an unavailable model | ✅ |
 
 ---
 
@@ -160,3 +161,15 @@ The next cases were found by the first full run of [the evaluation](evaluation.m
 * **Why:** Not our code and not the API key. Timing the same tiny request against NVIDIA three times gave 3.3 s, 1.2 s and **67.8 s** for 29 tokens, i.e. the request was waiting in the shared free endpoint's queue. The client waited up to 180 s per request with no fallback, so one stuck request could sink the whole analysis.
 * **What we changed:** `llm_client.call_llm` now waits at most 50 s per attempt, then tries a fallback model (`nemotron-3-ultra-550b-a55b`), then the main model again. A withdrawn model (404/410) goes straight to the fallback, which also covers cases 1 and 19. Each answer reports which model produced it. The fallback was chosen by timing candidates on real prompts while the main model was stalling: Ultra answered all three checks correctly in 7–41 s; `nemotron-3.5-lightning` was slow and misrouted a question; `nemotron-3-nano-omni` missed the comparison intent.
 * **Observed after the fix:** In a live run, the main model timed out and the fallback answered "What is the customer asking about?" correctly. (Tests: `test_one_stall_is_answered_by_the_fallback`, `test_stalled_main_model_falls_back_then_retries_main`, `test_withdrawn_model_goes_straight_to_fallback`, `test_bad_key_does_not_try_other_models`.)
+
+### 22. Merging the Gemini client broke the retry and backup logic and picked an unavailable model
+
+* **What went wrong:** After a teammate's pull request added Gemini support (with rotation over several API keys) and was merged on GitHub, 5 unit tests failed. Running the code showed:
+  - a timeout or network error made the client give up immediately instead of trying again;
+  - the NVIDIA backup model was configured but never called;
+  - the wait per request went back to 180 s, so two slow tries (360 s) could exceed Vercel's 300 s limit;
+  - the default Gemini model, `gemini-2.5-flash`, answers *"no longer available to new users"* for our keys, so every request would have failed on Gemini first;
+  - the README merge dropped sections 18–25 and left fragments behind.
+* **Why:** Two people changed `llm_client.py` at the same time, in different directions (multi-provider key rotation vs. a timeout and fallback chain). The merge kept one design and lost the other. Gemini model names were taken from documentation rather than tested with our keys.
+* **What we changed:** One client that keeps both ideas. Gemini goes first, rotating keys on HTTP 429, then Nemotron 3.5 Super VL, then Nemotron 3 Ultra. Each request is limited to 50 s, a whole call to 280 s, and every answer records the model that produced it. The default Gemini model is `gemini-3.5-flash`, the one confirmed to work with our keys. The README was restored from the last complete version and updated. New tests cover the provider order, key rotation, falling back to NVIDIA when Gemini stalls or every key is rate-limited, and the time budget (54 tests pass).
+* **Verified live:** Gemini 3.5 Flash analyzed all six sample documents correctly. When the free Gemini key ran out of quota (HTTP 429) mid-run, NVIDIA answered the remaining questions correctly.

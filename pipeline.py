@@ -127,7 +127,7 @@ def _same_question(first: str, second: str) -> bool:
 _analysis_cache: dict[str, dict] = {}
 
 
-def _verify_fields(raw_fields: Any, document: dict[str, str]) -> dict[str, dict]:
+def _verify_fields(raw_fields: Any, document: dict[str, str], source: str) -> dict[str, dict]:
     fields = {}
     for name, details in (raw_fields or {}).items() if isinstance(raw_fields, dict) else []:
         if not isinstance(details, dict):
@@ -154,7 +154,7 @@ def _verify_fields(raw_fields: Any, document: dict[str, str]) -> dict[str, dict]
             "evidence": evidence,
             "lines": citations[0]["lines"] if citations else [],
             "verified": verified,
-            "source": llm_client.get_provider(),
+            "source": source,
         }
     return fields
 
@@ -176,7 +176,8 @@ def analyze(name: str, text: str) -> dict:
     document_type = result.get("document_type")
     if document_type not in DOCUMENT_TYPES:
         document_type = "unknown"
-    fields = _verify_fields(result.get("fields"), document)
+    source = result.get("_provider", llm_client.get_provider())
+    fields = _verify_fields(result.get("fields"), document, source)
     verified_fields = {key: value for key, value in fields.items() if value["verified"]}
 
     inconsistencies = []
@@ -186,7 +187,7 @@ def analyze(name: str, text: str) -> dict:
             inconsistencies.append({
                 "issue": str(item["issue"]).strip(),
                 "evidence": [citation["quote"] for citation in citations],
-                "source": llm_client.get_provider(),
+                "source": source,
             })
     inconsistencies += check_internal_consistency(verified_fields)
 
@@ -203,7 +204,7 @@ def analyze(name: str, text: str) -> dict:
         "fields": fields,
         "inconsistencies": inconsistencies,
         "missing_questions": missing[:8],
-        "model": model_name,
+        "model": result.get("_model", model_name),
     }
     if len(_analysis_cache) > 128:
         _analysis_cache.clear()
@@ -252,8 +253,9 @@ def answer(question: str, documents: list[dict[str, str]]) -> dict:
     response = {
         "answer": result["answer"].strip(),
         "citations": citations,
-        "answer_source": llm_client.get_provider(),
-        "model": llm_client.get_model(),
+        # The provider/model that actually answered (a backup if the first one failed).
+        "answer_source": result.get("_provider", llm_client.get_provider()),
+        "model": result.get("_model", llm_client.get_model()),
         **grade_answer(result["answer"], citations, documents, question),
     }
     if isinstance(result.get("explanation"), str) and result["explanation"].strip():
