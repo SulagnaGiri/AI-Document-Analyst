@@ -99,6 +99,10 @@ class FormatTests(unittest.TestCase):
         self.assertEqual(format_money("840.5", "USD"), "$840.50")
         self.assertEqual(format_money("10", "EUR"), "EUR 10.00")
         self.assertEqual(format_money("TBD"), "TBD")
+        self.assertEqual(format_money("481630.08", "INR"), "₹4,81,630.08")
+        self.assertEqual(format_money("12345678", "INR"), "₹1,23,45,678.00")
+        self.assertEqual(format_money("999", "INR"), "₹999.00")
+        self.assertEqual(format_money("1234567.5", "USD"), "$1,234,567.50")
 
 
 if __name__ == "__main__":

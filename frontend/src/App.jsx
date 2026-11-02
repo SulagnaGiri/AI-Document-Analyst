@@ -261,6 +261,10 @@ function App() {
   const [chatError, setChatError] = useState('')
   const [chatting, setChatting] = useState(false)
   const fileInput = useRef(null)
+  // One hidden file input for the comparison card; uploadRole remembers which slot opened it.
+  const roleFileInput = useRef(null)
+  const uploadRole = useRef(null)
+  const [roleUploading, setRoleUploading] = useState('')
   const chatEnd = useRef(null)
 
   const selected = documents.find((doc) => doc.id === selectedId)
@@ -274,6 +278,22 @@ function App() {
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [chatMessages, chatting])
+
+  // Upload a file straight into the invoice or purchase-order slot of the comparison.
+  const uploadForRole = async (role, file) => {
+    if (!file) return
+    setRoleUploading(role)
+    setDocError('')
+    try {
+      const doc = await fileToDoc(file)
+      addDocuments([doc])
+      ;(role === 'invoice' ? setPairInvoice : setPairPO)(String(doc.id))
+    } catch (error) {
+      setDocError(error.message)
+    } finally {
+      setRoleUploading('')
+    }
+  }
 
   const addDocuments = (newDocs) => {
     if (!newDocs.length) return
@@ -436,6 +456,8 @@ function App() {
         </div>
       </header>
 
+      <input ref={roleFileInput} type="file" hidden accept=".txt,.md,.eml,.html,.pdf"
+        onChange={(event) => { uploadForRole(uploadRole.current, event.target.files?.[0]); event.target.value = '' }} />
       <input ref={fileInput} type="file" hidden multiple accept=".txt,.md,.eml,.html,.pdf"
         onChange={(event) => { loadFiles(event.target.files); event.target.value = '' }} />
 
@@ -537,36 +559,45 @@ function App() {
           )}
 
           {/* ---------- Cross-document check ---------- */}
-          {documents.length > 1 && (
-            <section className="card">
-              <div className="card-header">
-                <h2>Invoice vs purchase order</h2>
-                <button type="button" className="btn btn-primary" onClick={compare} disabled={comparing}>
-                  {comparing ? <><span className="spinner" /> Checking…</> : comparison ? 'Re-check' : 'Run check'}
-                </button>
-              </div>
-              <p className="muted">
-                Compares any two of your documents: upload your own invoice and purchase order, or use the samples.
-                Pick them below, or leave Auto-detect to let the system find the pair.
-              </p>
-              <div className="pair-select">
-                {[['Invoice', pairInvoice, setPairInvoice, pairPO], ['Purchase order', pairPO, setPairPO, pairInvoice]].map(([label, value, setValue, other]) => (
-                  <label key={label}>
-                    <span>{label}</span>
-                    <select value={documents.some((doc) => String(doc.id) === value) ? value : ''} onChange={(event) => { setValue(event.target.value); setComparison(null) }}>
-                      <option value="">Auto-detect</option>
+          <section className="card">
+            <div className="card-header">
+              <h2>Invoice vs purchase order</h2>
+              <button type="button" className="btn btn-primary" onClick={compare} disabled={comparing || documents.length < 2}>
+                {comparing ? <><span className="spinner" /> Checking…</> : comparison ? 'Re-check' : 'Run check'}
+              </button>
+            </div>
+            <p className="muted">
+              Upload an invoice and a purchase order below, or pick from your documents.
+              Leave Auto-detect to let the system find the pair.
+            </p>
+            <div className="pair-select">
+              {[
+                ['invoice', 'Invoice', pairInvoice, setPairInvoice, pairPO],
+                ['purchase_order', 'Purchase order', pairPO, setPairPO, pairInvoice],
+              ].map(([role, label, value, setValue, other]) => (
+                <div className="pair-slot" key={role}>
+                  <label htmlFor={`pair-${role}`}>{label}</label>
+                  <div className="pair-row">
+                    <select id={`pair-${role}`} value={documents.some((doc) => String(doc.id) === value) ? value : ''}
+                      onChange={(event) => { setValue(event.target.value); setComparison(null) }}>
+                      <option value="">{documents.length ? 'Auto-detect' : 'No documents yet'}</option>
                       {documents.filter((doc) => String(doc.id) !== other).map((doc) => (
                         <option key={doc.id} value={String(doc.id)}>
                           {doc.name}{analyses[doc.id] ? ` (${formatLabel(analyses[doc.id].document_type)})` : ''}
                         </option>
                       ))}
                     </select>
-                  </label>
-                ))}
-              </div>
-              {comparison && <ComparisonResult comparison={comparison} />}
-            </section>
-          )}
+                    <button type="button" className="btn btn-ghost pair-upload" disabled={roleUploading === role}
+                      onClick={() => { uploadRole.current = role; roleFileInput.current?.click() }}>
+                      {roleUploading === role ? <><span className="spinner small" /> Uploading…</> : 'Upload'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {documents.length < 2 && <p className="fineprint">Add at least two documents to run the check.</p>}
+            {comparison && <ComparisonResult comparison={comparison} />}
+          </section>
         </div>
 
         {/* ---------- Chat ---------- */}

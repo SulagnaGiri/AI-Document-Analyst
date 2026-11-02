@@ -1095,6 +1095,29 @@ cite {
   margin: 12px 0 4px;
 }
 
+.pair-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pair-row {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pair-row select {
+  flex: 1;
+}
+
+.pair-upload {
+  flex: none;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
 .pair-select label {
   display: flex;
   flex-direction: column;

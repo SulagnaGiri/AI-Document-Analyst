@@ -15,11 +15,23 @@ from grounding import to_decimal
 CURRENCY_SYMBOLS = {"INR": "₹", "USD": "$"}
 
 
+def _indian_grouping(amount: Decimal) -> str:
+    """4,81,630.08 rather than 481,630.08: lakh/crore grouping, as used on Indian invoices."""
+    sign = "-" if amount < 0 else ""
+    whole, fraction = f"{abs(amount):.2f}".split(".")
+    if len(whole) > 3:
+        head, tail = whole[:-3], whole[-3:]
+        head = ",".join([head[max(i - 2, 0):i] for i in range(len(head), 0, -2)][::-1])
+        whole = f"{head},{tail}"
+    return f"{sign}{whole}.{fraction}"
+
+
 def format_money(value: Any, currency: str | None = None) -> str:
     amount = to_decimal(value)
     if amount is None:
         return str(value)
-    return f"{CURRENCY_SYMBOLS.get(currency or '', (currency + ' ') if currency else '')}{amount:,.2f}"
+    number = _indian_grouping(amount) if currency == "INR" else f"{amount:,.2f}"
+    return f"{CURRENCY_SYMBOLS.get(currency or '', (currency + ' ') if currency else '')}{number}"
 
 
 def _normalize_reference(value: str) -> str:
