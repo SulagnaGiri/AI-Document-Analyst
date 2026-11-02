@@ -37,9 +37,10 @@ NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3.5-super-vl-120b
 NVIDIA_FALLBACK_MODEL = os.environ.get("NVIDIA_FALLBACK_MODEL", "nvidia/nemotron-3-ultra-550b-a55b")
 NVIDIA_API_URL = os.environ.get("NVIDIA_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
 
-# Seconds to wait for one reply. A normal analysis takes ~5-25 s; longer usually means the request
-# is stuck in a queue and the next step will answer sooner. 3 steps x 50 s fits Vercel's 300 s limit.
-LLM_TIMEOUT = float(os.environ.get("LLM_TIMEOUT") or os.environ.get("NVIDIA_TIMEOUT") or "50")
+# Seconds to wait for one reply. A normal reply takes ~3-25 s; longer usually means the request is
+# stuck in a queue and the next step will answer sooner. Kept short because the browser connection is
+# silent while we wait, and some networks drop silent connections after about a minute.
+LLM_TIMEOUT = float(os.environ.get("LLM_TIMEOUT") or os.environ.get("NVIDIA_TIMEOUT") or "35")
 # Total time one call_llm may spend across every step and key. Vercel stops the function at 300 s,
 # so we stop early enough to return a clear error instead of being killed mid-request.
 LLM_TOTAL_BUDGET = float(os.environ.get("LLM_TOTAL_BUDGET", "280"))

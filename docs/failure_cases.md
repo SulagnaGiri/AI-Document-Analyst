@@ -26,6 +26,7 @@ Every case below was observed while building and testing this system. Each has a
 | 20 | A scanned PDF produced a confusing "Document text is required" error | ✅ (clear error); OCR open |
 | 21 | The deployed app stalled for minutes, then failed, while NVIDIA's queue was busy | ✅ |
 | 22 | Merging the Gemini client broke the retry and backup logic and picked an unavailable model | ✅ |
+| 23 | "Failed to fetch" while the server was still falling back to a backup model | ✅ (mitigated) |
 
 ---
 
@@ -173,3 +174,10 @@ The next cases were found by the first full run of [the evaluation](evaluation.m
 * **Why:** Two people changed `llm_client.py` at the same time, in different directions (multi-provider key rotation vs. a timeout and fallback chain). The merge kept one design and lost the other. Gemini model names were taken from documentation rather than tested with our keys.
 * **What we changed:** One client that keeps both ideas. Gemini goes first, rotating keys on HTTP 429, then Nemotron 3.5 Super VL, then Nemotron 3 Ultra. Each request is limited to 50 s, a whole call to 280 s, and every answer records the model that produced it. The default Gemini model is `gemini-3.5-flash`, the one confirmed to work with our keys. The README was restored from the last complete version and updated. New tests cover the provider order, key rotation, falling back to NVIDIA when Gemini stalls or every key is rate-limited, and the time budget (54 tests pass).
 * **Verified live:** Gemini 3.5 Flash analyzed all six sample documents correctly. When the free Gemini key ran out of quota (HTTP 429) mid-run, NVIDIA answered the remaining questions correctly.
+
+### 23. "Failed to fetch" while the server was still falling back to a backup model
+
+* **What went wrong:** On the live site, a comparison sometimes ended with the browser error *"Failed to fetch"*, even though the server has a backup-model chain. Re-running the same comparison took 3 s.
+* **Why:** "Failed to fetch" means the browser received no response at all. While the first model is stuck, the server waits silently (up to `LLM_TIMEOUT` per model) before trying the next one. Vercel's documentation notes that HTTP/1.1 clients and intermediate networks may close connections that stay idle that long, so the connection can drop while the fallback is still running on the server.
+* **What we changed:** The frontend retries once after a dropped connection (cheap, because analyses are cached on the server) and shows a plain-language message instead of "Failed to fetch". It also handles non-JSON replies such as Vercel's HTML timeout page. The per-model wait went from 50 s to 35 s, so a stuck model is abandoned sooner and the connection stays silent for less time.
+* **Still open:** A complete fix would stream progress (or a heartbeat) to the browser during long waits, or run long comparisons as background jobs the page polls.

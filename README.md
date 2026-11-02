@@ -689,7 +689,7 @@ nvidia/nemotron-3.5-super-vl-120b-a12b    (backup 1, NVIDIA NIM)
 nvidia/nemotron-3-ultra-550b-a55b         (backup 2, NVIDIA NIM)
 ```
 
-Each request waits at most `LLM_TIMEOUT` (50 s). If a model times out, returns invalid or incomplete JSON, has been withdrawn (HTTP 404/410), or every Gemini key is rate-limited (HTTP 429), the next model in the chain is tried. A whole call never spends more than `LLM_TOTAL_BUDGET` (280 s), which keeps it inside Vercel's 300-second function limit. Each answer records which model actually produced it.
+Each request waits at most `LLM_TIMEOUT` (35 s). If a model times out, returns invalid or incomplete JSON, has been withdrawn (HTTP 404/410), or every Gemini key is rate-limited (HTTP 429), the next model in the chain is tried. A whole call never spends more than `LLM_TOTAL_BUDGET` (280 s), which keeps it inside Vercel's 300-second function limit. Each answer records which model actually produced it.
 
 ### API Integration
 
@@ -1479,7 +1479,7 @@ The project maintains a separate failure-case document:
 docs/failure_cases.md
 ```
 
-It documents 22 failure cases, including 6 cases identified through evaluation.
+It documents 23 failure cases, including 6 cases identified through evaluation.
 
 ## 17.5 Evaluation Documentation
 
@@ -1516,7 +1516,7 @@ gemini-3.5-flash (rotates over all keys on HTTP 429)  ->  nemotron-3.5-super-vl 
 | `NVIDIA_MODEL` | `nvidia/nemotron-3.5-super-vl-120b-a12b` | First NVIDIA backup model. |
 | `NVIDIA_FALLBACK_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | Second NVIDIA backup model; empty disables it. |
 | `LLM_PROVIDER` | (auto: Gemini first) | Set to `nvidia` to try NVIDIA before Gemini. |
-| `LLM_TIMEOUT` | `50` | Seconds to wait for one model reply before trying the next step. |
+| `LLM_TIMEOUT` | `35` | Seconds to wait for one model reply before trying the next step. |
 | `LLM_TOTAL_BUDGET` | `280` | Maximum seconds for one request across all retries (Vercel stops functions at 300 s). |
 | `PORT` | `5001` | Backend server port. |
 
@@ -1760,7 +1760,7 @@ The following files contain the main implementation, architecture, prompts, eval
 | `docs/design.md` | **Solution design:** Architecture decomposition, system design, LLM responsibilities, deterministic verification, and technical trade-offs. |
 | `docs/prompts.md` | **Prompt engineering:** Prompt evolution from V1 through the final version, including identified problems and improvements. |
 | `docs/evaluation.md` | **Evaluation results:** Performance results from the 45-case benchmark. |
-| `docs/failure_cases.md` | **Failure analysis:** Documentation of 22 failure cases, including 6 discovered during evaluation. |
+| `docs/failure_cases.md` | **Failure analysis:** Documentation of 23 failure cases, including 6 discovered during evaluation. |
 | `docs/ai_usage.md` | **AI usage:** Documentation of AI-assisted development. |
 | `pipeline.py` | Core analysis, Q&A, comparison workflows, and prompts. |
 | `grounding.py` | Numbered-line context, citation resolution, value verification, and answer confidence labels. |

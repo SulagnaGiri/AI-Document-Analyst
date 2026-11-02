@@ -45,23 +45,48 @@ function readFileAsText(file) {
   })
 }
 
+// fetch() rejects with a TypeError ("Failed to fetch") when the connection drops before any reply,
+// e.g. a network or proxy closing a request that waited silently while a slow model was retried.
+// Retry once (the server caches analyses, so the retry is usually quick), then explain in plain words.
+async function request(url, options) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await fetch(url, options)
+    } catch (error) {
+      if (!(error instanceof TypeError) || attempt === 2) {
+        throw new Error('The connection to the server dropped, usually because the AI model was slow to respond. Please try again.')
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    }
+  }
+}
+
+// Vercel answers timeouts with an HTML page, so do not assume every reply is JSON.
+async function readJson(response) {
+  try {
+    return await response.json()
+  } catch {
+    return { error: `The server returned an unexpected reply (HTTP ${response.status}). Please try again.` }
+  }
+}
+
 async function fileToDoc(file) {
   if (!file.name.toLowerCase().endsWith('.pdf')) return makeDoc(file.name, await readFileAsText(file))
   const formData = new FormData()
   formData.append('file', file)
-  const response = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: formData })
-  const data = await response.json()
+  const response = await request(`${API_BASE}/api/upload`, { method: 'POST', body: formData })
+  const data = await readJson(response)
   if (!response.ok) throw new Error(data.error || `Unable to read ${file.name}.`)
   return makeDoc(file.name, data.text)
 }
 
 async function postJson(path, body) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await request(`${API_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  const data = await response.json()
+  const data = await readJson(response)
   if (!response.ok) throw new Error(data.error || 'Request failed.')
   return data
 }
