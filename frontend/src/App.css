@@ -60,6 +60,12 @@ h1 {
   min-width: 0;
 }
 
+/* Flex items default to min-width: auto, so wide content (e.g. long file names in a <select>)
+   would widen the card past the column. Let cards shrink to the column instead. */
+.column > .card {
+  min-width: 0;
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1064,3 +1070,64 @@ cite {
   background: #10b981;
 }
 
+
+/* ---------- Per-document actions & pair picker ---------- */
+.row-analyze {
+  flex: none;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.row-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pair-select {
+  display: grid;
+  min-width: 0;  /* never let long file names in the dropdowns widen the card */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 4px;
+}
+
+.pair-select label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  min-width: 0;
+}
+
+.pair-select select {
+  font: inherit;
+  font-size: 0.88rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.pair-select + .comparison {
+  margin-top: 14px;
+}
+
+@media (max-width: 600px) {
+  .pair-select {
+    grid-template-columns: 1fr;
+  }
+}

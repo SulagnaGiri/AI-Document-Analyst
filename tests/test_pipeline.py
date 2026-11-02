@@ -182,6 +182,38 @@ class AnswerTests(unittest.TestCase):
         self.assertEqual(comparison["purchase_order_amount"], "48,000.00")
 
 
+class ChosenPairTests(unittest.TestCase):
+    def setUp(self):
+        pipeline._analysis_cache.clear()
+
+    def test_user_chosen_pair_overrides_detected_types(self):
+        documents = [
+            {"name": "bill.txt", "text": INVOICE},
+            {"name": "order.txt", "text": PURCHASE_ORDER},
+            {"name": "old_invoice.txt", "text": "INVOICE\nGrand Total: INR 1"},
+        ]
+        analyses = {
+            # The model thought the user's bill was unknown; the user says it is the invoice.
+            "bill.txt": fake_analysis("unknown", {"total_amount": {"value": "52,400", "lines": [8]},
+                                                  "purchase_order_number": {"value": "PO-778", "lines": [5]}}),
+            "order.txt": fake_analysis("purchase_order", {"total_amount": {"value": "48,000", "lines": [5]},
+                                                          "purchase_order_number": {"value": "PO-778", "lines": [3]}}),
+            "old_invoice.txt": fake_analysis("invoice", {"total_amount": {"value": "1", "lines": [2]}}),
+        }
+        with llm_on(), patch.object(pipeline, "_llm_analyze_document", side_effect=lambda name, text: analyses[name]):
+            result = pipeline.compare(documents, invoice="bill.txt", purchase_order="order.txt")
+        self.assertEqual(result["invoice_document"], "bill.txt")
+        self.assertEqual(result["status"], "MISMATCH")
+        self.assertIn("You chose bill.txt as the invoice; it was detected as unknown.", result["observations"])
+
+    def test_same_document_for_both_roles_is_rejected(self):
+        response = app.app.test_client().post("/api/compare", json={
+            "documents": [{"name": "a.txt", "text": INVOICE}, {"name": "b.txt", "text": PURCHASE_ORDER}],
+            "invoice": "a.txt", "purchase_order": "a.txt",
+        })
+        self.assertEqual(response.status_code, 400)
+
+
 class AnalysisTests(unittest.TestCase):
     def setUp(self):
         pipeline._analysis_cache.clear()

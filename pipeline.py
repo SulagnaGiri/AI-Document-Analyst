@@ -214,16 +214,34 @@ def analyze(name: str, text: str) -> dict:
 
 # ---------------------------------------------------------------- comparison
 
-def compare(documents: list[dict[str, str]]) -> dict:
-    """Invoice vs purchase order: LLM extracts, code verifies and decides the status."""
+def compare(documents: list[dict[str, str]], invoice: str | None = None, purchase_order: str | None = None) -> dict:
+    """Invoice vs purchase order: LLM extracts, code verifies and decides the status.
+
+    `invoice` / `purchase_order` are document names the user picked. They override the detected
+    types, so any uploaded pair can be compared; without them the pair is detected automatically.
+    """
     with ThreadPoolExecutor(max_workers=6) as pool:
         analyses = list(pool.map(lambda doc: analyze(doc.get("name", "document.txt"), doc.get("text", "")), documents))
-    # Only verified values may influence MATCH / MISMATCH.
-    comparable = [
-        {**analysis, "fields": {key: value for key, value in analysis["fields"].items() if value.get("verified")}}
-        for analysis in analyses
-    ]
+    notes = []
+    comparable = []
+    for analysis in analyses:
+        role = analysis["document_type"]
+        if invoice or purchase_order:
+            chosen = {invoice: "invoice", purchase_order: "purchase_order"}.get(analysis["name"])
+            if chosen:
+                if role != chosen:
+                    notes.append(f"You chose {analysis['name']} as the {chosen.replace('_', ' ')}; it was detected as {role.replace('_', ' ')}.")
+                role = chosen
+            elif role in ("invoice", "purchase_order"):
+                role = f"other_{role}"  # keep it out of the pairing, still listed as related
+        # Only verified values may influence MATCH / MISMATCH.
+        comparable.append({
+            **analysis,
+            "document_type": role,
+            "fields": {key: value for key, value in analysis["fields"].items() if value.get("verified")},
+        })
     comparison = compare_documents(comparable)
+    comparison["observations"] = notes + comparison["observations"]
     comparison["documents"] = [{"name": item["name"], "document_type": item["document_type"]} for item in analyses]
     return comparison
 

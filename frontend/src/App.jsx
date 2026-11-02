@@ -246,9 +246,13 @@ function App() {
   const [analyzingIds, setAnalyzingIds] = useState([])
   const [comparison, setComparison] = useState(null)
   const [comparing, setComparing] = useState(false)
+  // Document ids the user picked as invoice / purchase order ('' = auto-detect).
+  const [pairInvoice, setPairInvoice] = useState('')
+  const [pairPO, setPairPO] = useState('')
   const [docError, setDocError] = useState('')
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [loadingSamples, setLoadingSamples] = useState(false)
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteName, setPasteName] = useState('')
   const [pasteText, setPasteText] = useState('')
@@ -294,13 +298,20 @@ function App() {
   }
 
   const loadSamples = async () => {
+    if (loadingSamples) return
+    setLoadingSamples(true)
     setDocError('')
     try {
       const response = await fetch(`${API_BASE}/api/samples`)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const data = await response.json()
-      addDocuments(data.documents.map((doc) => makeDoc(doc.name, doc.text)))
-    } catch {
-      setDocError('Could not load the sample documents from the backend.')
+      // Load the set once: skip samples that are already in the list.
+      const present = new Set(documents.map((doc) => doc.name))
+      addDocuments(data.documents.filter((doc) => !present.has(doc.name)).map((doc) => makeDoc(doc.name, doc.text)))
+    } catch (error) {
+      setDocError(`Could not load the sample documents (${error.message}). The server may be starting up; please try again.`)
+    } finally {
+      setLoadingSamples(false)
     }
   }
 
@@ -323,6 +334,8 @@ function App() {
   }
 
   const clearAll = () => {
+    setPairInvoice('')
+    setPairPO('')
     setDocuments([])
     setSelectedId(null)
     setAnalyses({})
@@ -353,7 +366,12 @@ function App() {
     setComparing(true)
     setDocError('')
     try {
-      setComparison(await postJson('/api/compare', { documents: documents.map(({ name, text }) => ({ name, text })) }))
+      const nameOf = (id) => documents.find((doc) => String(doc.id) === id)?.name || null
+      setComparison(await postJson('/api/compare', {
+        documents: documents.map(({ name, text }) => ({ name, text })),
+        invoice: nameOf(pairInvoice),
+        purchase_order: nameOf(pairPO),
+      }))
     } catch (error) {
       setDocError(error.message)
     } finally {
@@ -445,10 +463,15 @@ function App() {
                       <button type="button" className={`doc-row ${doc.id === selectedId ? 'active' : ''}`} onClick={() => setSelectedId(doc.id)}>
                         <span className="file-icon" aria-hidden="true">{fileExt(doc.name)}</span>
                         <span className="doc-name">{doc.name}</span>
-                        {analyzingIds.includes(doc.id) ? <span className="spinner small" /> : analysis && (
+                        {analyzingIds.includes(doc.id) ? <span className="row-status"><span className="spinner small" /> Analyzing…</span> : analysis && (
                           <span className="badge badge-accent">{formatLabel(analysis.document_type)}</span>
                         )}
                       </button>
+                      {!analysis && !analyzingIds.includes(doc.id) && (
+                        <button type="button" className="btn btn-ghost row-analyze" onClick={() => { setSelectedId(doc.id); setView('analysis'); analyze([doc]) }}>
+                          Analyze
+                        </button>
+                      )}
                       <button type="button" className="icon-btn" aria-label={`Remove ${doc.name}`} onClick={() => removeDocument(doc.id)}>×</button>
                     </li>
                   )
@@ -471,7 +494,9 @@ function App() {
               <div className="action-links">
                 {hasDocuments && <button type="button" className="btn btn-link" onClick={() => fileInput.current?.click()}>+ Upload</button>}
                 <button type="button" className="btn btn-link" onClick={() => setPasteOpen(true)}>+ Paste text</button>
-                <button type="button" className="btn btn-link" onClick={loadSamples}>Load sample set</button>
+                <button type="button" className="btn btn-link" onClick={loadSamples} disabled={loadingSamples}>
+                  {loadingSamples ? <><span className="spinner small" /> Loading samples…</> : 'Load sample set'}
+                </button>
               </div>
               {hasDocuments && (
                 <button type="button" className="btn btn-primary" onClick={() => analyze(documents)} disabled={analyzingIds.length > 0}>
@@ -482,21 +507,6 @@ function App() {
 
             {docError && <div className="notice notice-error">{docError}</div>}
           </section>
-
-          {/* ---------- Cross-document check ---------- */}
-          {documents.length > 1 && (
-            <section className="card">
-              <div className="card-header">
-                <h2>Invoice vs purchase order</h2>
-                <button type="button" className="btn btn-primary" onClick={compare} disabled={comparing}>
-                  {comparing ? <><span className="spinner" /> Checking…</> : comparison ? 'Re-check' : 'Run check'}
-                </button>
-              </div>
-              {comparison ? <ComparisonResult comparison={comparison} /> : (
-                <p className="muted">Finds the invoice and purchase order in this set, verifies totals, vendor and PO reference, and flags any discrepancy.</p>
-              )}
-            </section>
-          )}
 
           {/* ---------- Selected document ---------- */}
           {selected && (
@@ -523,6 +533,38 @@ function App() {
                   </button>
                 </div>
               )}
+            </section>
+          )}
+
+          {/* ---------- Cross-document check ---------- */}
+          {documents.length > 1 && (
+            <section className="card">
+              <div className="card-header">
+                <h2>Invoice vs purchase order</h2>
+                <button type="button" className="btn btn-primary" onClick={compare} disabled={comparing}>
+                  {comparing ? <><span className="spinner" /> Checking…</> : comparison ? 'Re-check' : 'Run check'}
+                </button>
+              </div>
+              <p className="muted">
+                Compares any two of your documents: upload your own invoice and purchase order, or use the samples.
+                Pick them below, or leave Auto-detect to let the system find the pair.
+              </p>
+              <div className="pair-select">
+                {[['Invoice', pairInvoice, setPairInvoice, pairPO], ['Purchase order', pairPO, setPairPO, pairInvoice]].map(([label, value, setValue, other]) => (
+                  <label key={label}>
+                    <span>{label}</span>
+                    <select value={documents.some((doc) => String(doc.id) === value) ? value : ''} onChange={(event) => { setValue(event.target.value); setComparison(null) }}>
+                      <option value="">Auto-detect</option>
+                      {documents.filter((doc) => String(doc.id) !== other).map((doc) => (
+                        <option key={doc.id} value={String(doc.id)}>
+                          {doc.name}{analyses[doc.id] ? ` (${formatLabel(analyses[doc.id].document_type)})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+              {comparison && <ComparisonResult comparison={comparison} />}
             </section>
           )}
         </div>

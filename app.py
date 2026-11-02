@@ -114,10 +114,14 @@ def analyze_endpoint():
 
 @app.route("/api/compare", methods=["POST"])
 def compare_endpoint():
-    documents = _documents_from(request.get_json(silent=True) or {})
+    payload = request.get_json(silent=True) or {}
+    documents = _documents_from(payload)
     if len(documents) < 2:
         return jsonify({"error": "At least two documents are required to compare."}), 400
-    return jsonify(pipeline.compare(documents))
+    invoice, purchase_order = payload.get("invoice") or None, payload.get("purchase_order") or None
+    if invoice and invoice == purchase_order:
+        return jsonify({"error": "Choose two different documents for the invoice and the purchase order."}), 400
+    return jsonify(pipeline.compare(documents, invoice, purchase_order))
 
 
 @app.route("/api/answer", methods=["POST"])
